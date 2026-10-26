@@ -1,0 +1,1518 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Falta1 · Prototipo navegable</title>
+<meta name="description" content="Falta1: viajes compartidos entre localidades de la Costa Atlántica bonaerense. Prototipo navegable con fines académicos.">
+<meta name="theme-color" content="#F6F1E7">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23E8684A'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='700' font-size='18' text-anchor='middle' fill='white'%3E1%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sand:#F6F1E7; --sand-2:#EDE6D6; --paper:#FFFCF6; --page:#E6DECD;
+  --line:#E3DACA; --line-2:#CFC4AE;
+  --ocean:#0E3B5C; --ocean-2:#235A80; --ocean-tint:#E1EAEF; --sea:#D3E2E8; --land:#F1EBDD;
+  --coral:#E8684A; --coral-dark:#CF5537; --coral-tint:#FBE7E0;
+  --ink:#16212A; --muted:#675E52; --muted-2:#71675A;
+  --r:12px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  font-family:"Inter Tight",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-variant-numeric:tabular-nums;
+  background:var(--page); color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:14px; padding:20px 16px;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--ocean);outline-offset:2px}
+.btn-primary:focus-visible{outline-color:var(--ocean)}
+h1:focus,h1:focus-visible{outline:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.ic{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ic.sm{width:16px;height:16px}
+.ic.fill{fill:currentColor;stroke:none}
+
+/* ---------- Marco ---------- */
+.topbar{display:flex;align-items:center;gap:14px}
+.topbar-label{font-size:13px;color:var(--muted);font-weight:500}
+.mode{display:grid;grid-template-columns:1fr 1fr;background:var(--paper);border:1px solid var(--line-2);border-radius:var(--r);padding:4px;min-width:330px}
+.mode button{min-height:44px;border:0;border-radius:9px;background:transparent;font-weight:600;font-size:15px;color:var(--muted);padding:0 14px}
+.mode button[aria-checked="true"]{background:var(--ocean);color:#fff}
+.phone-wrap{--s:1;width:calc(410px * var(--s));height:calc(864px * var(--s));flex:none}
+.phone{width:410px;height:864px;padding:10px;background:#15222C;border-radius:54px;transform:scale(var(--s));transform-origin:top left;box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 18px 40px -24px rgba(14,59,92,.45)}
+.app{position:relative;width:390px;height:844px;background:var(--sand);border-radius:44px;overflow:hidden;display:flex;flex-direction:column}
+.statusbar{height:46px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:4px 30px 0 34px;font-weight:600;font-size:15px;color:var(--ink)}
+.statusbar svg{height:12px;width:auto;fill:var(--ink)}
+.disclaimer{margin:0;font-size:13px;color:var(--muted)}
+#screen{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;overscroll-behavior:contain;scrollbar-width:thin}
+.scr{min-height:100%;display:flex;flex-direction:column;animation:enter .22s ease-out}
+@keyframes enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.scr{animation:none}*{transition:none!important}}
+
+@media (max-width:500px){
+  body{padding:0;gap:0;justify-content:flex-start;height:100dvh;min-height:0;overflow:hidden}
+  .topbar{width:100%;padding:8px 12px;background:var(--sand-2);border-bottom:1px solid var(--line);flex:none}
+  .topbar-label{display:none}
+  .mode{width:100%;min-width:0}
+  .phone-wrap{width:100%!important;height:auto!important;flex:1;min-height:0}
+  .phone{width:100%;height:100%;padding:0;border-radius:0;transform:none!important;background:none;box-shadow:none}
+  .app{width:100%;height:100%;border-radius:0}
+  .statusbar,.disclaimer{display:none}
+}
+
+/* ---------- Estructura de pantalla ---------- */
+.hdr{position:sticky;top:0;z-index:5;background:var(--sand);display:flex;align-items:center;gap:6px;min-height:58px;padding:6px 16px 6px 8px}
+.hdr.root{padding-left:20px;justify-content:space-between}
+.hdr-t{min-width:0;flex:1}
+.h1{font-size:18px;font-weight:700;margin:0;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-sub{margin:1px 0 0;font-size:13px;color:var(--muted)}
+.icon-btn{width:44px;height:44px;flex:none;border:0;border-radius:var(--r);background:transparent;display:grid;place-items:center;color:var(--ocean)}
+.icon-btn:hover{background:var(--sand-2)}
+.pad{padding:0 20px}
+.display{font-size:30px;line-height:1.08;letter-spacing:-.03em;font-weight:800;margin:10px 0 8px;color:var(--ocean)}
+.lede{margin:0 0 20px;color:var(--muted);font-size:16px;line-height:1.45}
+.h2{font-size:15px;font-weight:700;margin:0 0 10px;color:var(--ink)}
+.block{margin-top:28px}
+.muted{color:var(--muted)}
+.foot{margin:auto 0 0;padding:28px 20px 20px;font-size:12.5px;color:var(--muted)}
+.logo{font-weight:800;font-size:24px;letter-spacing:-.04em;color:var(--ocean);display:inline-flex;align-items:center;line-height:1}
+.logo .one{display:inline-grid;place-items:center;width:1.08em;height:1.08em;margin-left:.06em;border-radius:50%;background:var(--coral);color:#fff;font-size:.78em;letter-spacing:0}
+
+/* ---------- Controles ---------- */
+.btn{min-height:52px;width:100%;border:0;border-radius:var(--r);padding:0 20px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:17px;text-decoration:none}
+.btn-primary{background:var(--coral);color:#fff;font-size:19px}
+.btn-primary:hover{background:var(--coral-dark)}
+.btn-primary:disabled{background:#D9CFBF;color:#5E554A;cursor:not-allowed}
+.btn-dark{background:var(--ocean);color:#fff}
+.btn-dark:hover{background:var(--ocean-2)}
+.btn-ghost{background:transparent;color:var(--ocean);border:1.5px solid var(--line-2)}
+.btn-ghost:hover{background:var(--sand-2)}
+.link{border:0;background:none;padding:10px 0;min-height:44px;color:var(--ocean);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.field{margin-bottom:14px}
+.field>label,.lbl{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.control{width:100%;min-height:52px;border:1.5px solid var(--line-2);border-radius:var(--r);background:var(--paper);font-size:17px;padding:0 14px;appearance:none;-webkit-appearance:none}
+select.control{padding-right:40px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230E3B5C' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:20px}
+textarea.control{padding:12px 14px;min-height:96px;resize:vertical;line-height:1.4}
+.control:focus{border-color:var(--ocean);outline:none;box-shadow:0 0 0 3px var(--ocean-tint)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.err{color:#A6381F;font-size:14px;font-weight:600;margin:0 0 10px;min-height:0}
+.err:empty{display:none}
+.hint{font-size:14px;color:var(--muted);margin:0 0 16px;line-height:1.4}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--sand-2);border-radius:var(--r);padding:4px;margin-bottom:16px}
+.seg button{min-height:44px;border:0;border-radius:9px;background:transparent;font-weight:600;font-size:15px;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.seg button[aria-checked="true"]{background:var(--paper);color:var(--ocean);box-shadow:0 1px 2px rgba(14,59,92,.14)}
+
+/* Origen / destino */
+.route-fields{display:grid;grid-template-columns:18px 1fr 44px;gap:0 10px;align-items:start;margin-bottom:6px}
+.rail{display:flex;flex-direction:column;align-items:center;padding-top:44px;height:100%}
+.rail .dot{width:12px;height:12px;border-radius:50%;border:2.5px solid var(--ocean);background:var(--sand);flex:none}
+.rail .dot.d{background:var(--ocean)}
+.rail .bar{flex:1;width:0;border-left:2px dotted var(--line-2);margin:4px 0;max-height:52px}
+.swap{margin-top:52px;border:1.5px solid var(--line-2);background:var(--paper)}
+
+/* Tabbar */
+.tabbar{flex:none;display:grid;grid-template-columns:repeat(4,1fr);background:var(--paper);border-top:1px solid var(--line);padding:4px 6px 20px}
+.tab{min-height:54px;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:600;color:var(--muted-2);position:relative;border-radius:10px}
+.tab[aria-current="page"]{color:var(--ocean)}
+.tab[aria-current="page"]::before{content:"";position:absolute;top:-5px;left:30%;right:30%;height:3px;border-radius:0 0 3px 3px;background:var(--ocean)}
+@media (max-width:500px){.tabbar{padding-bottom:max(6px,env(safe-area-inset-bottom))}}
+
+/* Avatares */
+.av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px;color:var(--ocean);flex:none;letter-spacing:-.02em}
+.av.lg{width:72px;height:72px;font-size:24px}
+.av.sm{width:36px;height:36px;font-size:13px;border:0}
+.rate{display:inline-flex;align-items:center;gap:3px;font-weight:600}
+.rate .ic{width:14px;height:14px;color:var(--ocean)}
+.ver{display:inline-flex;align-items:center;gap:4px;color:var(--ocean);font-weight:600}
+.ver .ic{width:15px;height:15px}
+
+/* Rutas guardadas */
+.saved{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.saved button{width:100%;min-height:64px;display:grid;grid-template-columns:1fr auto 20px;align-items:center;gap:10px;padding:12px 0;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left}
+.saved b{display:block;font-size:16px;font-weight:600}
+.saved small{color:var(--muted);font-size:13.5px}
+.saved .amt{font-weight:700;color:var(--ocean);font-size:16px}
+.saved .ic{color:var(--muted-2)}
+
+/* Tarjeta de viaje (resultados) */
+.res-meta{display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 12px;font-size:14px;color:var(--muted)}
+.trip{display:block;width:100%;text-align:left;background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:0;margin:0 0 12px;overflow:hidden}
+.trip:hover{border-color:var(--line-2)}
+.trip-top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;padding:16px 16px 14px}
+.times{display:flex;flex-direction:column;justify-content:space-between;font-weight:700;font-size:20px;letter-spacing:-.02em;line-height:1}
+.times span+span{font-size:15px;font-weight:600;color:var(--muted)}
+.stops{display:flex;flex-direction:column;justify-content:space-between;gap:14px;border-left:2px solid var(--ocean);padding-left:10px;font-size:15px;font-weight:600;line-height:1.15}
+.stops span{font-weight:500;color:var(--muted);font-size:13px}
+.when-now{font-size:12.5px;font-weight:700;color:var(--coral-dark);text-transform:none}
+.seatbox{text-align:right;font-size:13px;color:var(--muted)}
+.seats{display:flex;gap:3px;justify-content:flex-end;margin-bottom:6px}
+.seat{width:13px;height:15px;border-radius:5px 5px 3px 3px;border:1.6px solid var(--ocean)}
+.seat.taken{background:var(--line-2);border-color:var(--line-2)}
+.trip-drv{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px dashed var(--line-2);font-size:14px}
+.trip-drv .nm{font-weight:600;font-size:15px}
+.trip-drv .sub{color:var(--muted);font-size:13px;display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.trip-price{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:12px 16px;background:var(--sand-2);font-size:13.5px;color:var(--muted)}
+.trip-price strong{font-size:22px;color:var(--ocean);letter-spacing:-.02em}
+.trip-price .eq{white-space:nowrap}
+
+/* Detalle */
+.hero-route{display:flex;align-items:flex-end;gap:12px;margin:8px 0 4px}
+.code{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:.95;color:var(--ocean)}
+.hero-route .arrow{color:var(--muted-2);padding-bottom:6px}
+.hero-sub{font-size:14px;color:var(--muted);margin:6px 0 0}
+.tl{list-style:none;margin:0;padding:0;position:relative}
+.tl li{display:grid;grid-template-columns:48px 18px 1fr;gap:0 10px;padding-bottom:18px;position:relative}
+.tl li:last-child{padding-bottom:0}
+.tl li::after{content:"";position:absolute;left:64px;top:18px;bottom:-2px;border-left:2px solid var(--ocean)}
+.tl li:last-child::after{display:none}
+.tl li.mid::after{border-left-style:solid}
+.tl-t{font-weight:700;font-size:15px;padding-top:1px}
+.tl-dot{width:14px;height:14px;margin-top:3px;border-radius:50%;border:2.5px solid var(--ocean);background:var(--paper);z-index:1}
+.tl li.mid .tl-dot{width:10px;height:10px;margin:5px 2px 0;border-width:2px}
+.tl li.end .tl-dot{background:var(--ocean)}
+.tl b{display:block;font-size:16px;font-weight:600}
+.tl small{color:var(--muted);font-size:13.5px}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:0;font-size:15px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;text-align:right;font-weight:600}
+.drv-head{display:flex;gap:14px;align-items:center}
+.drv-head .nm{font-size:18px;font-weight:700}
+.drv-head .sub{font-size:14px;color:var(--muted);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap}
+.creds{list-style:none;margin:14px 0 0;padding:12px 0 0;border-top:1px solid var(--line);display:grid;gap:8px;font-size:14px}
+.creds li{display:flex;align-items:center;gap:8px}
+.creds .ic{width:18px;height:18px;color:var(--ocean)}
+.bio{font-size:15px;line-height:1.45;margin:12px 0 0}
+.reviews{list-style:none;margin:0;padding:0}
+.reviews li{padding:14px 0;border-bottom:1px solid var(--line)}
+.reviews li:first-child{padding-top:0}
+.reviews p{margin:0 0 6px;font-size:15px;line-height:1.45}
+.reviews small{color:var(--muted);font-size:13px;display:flex;gap:8px;align-items:center}
+.stars-sm{display:inline-flex;gap:1px;color:var(--ocean)}
+.stars-sm .ic{width:12px;height:12px}
+.stars-sm .off{color:var(--line-2)}
+.note{font-size:13.5px;color:var(--muted);line-height:1.45;margin:10px 0 0}
+.cta{position:sticky;bottom:0;margin-top:auto;background:var(--sand);border-top:1px solid var(--line);padding:12px 20px 14px;display:flex;align-items:center;gap:14px;z-index:4}
+.cta .tot{flex:none;line-height:1.1}
+.cta .tot small{display:block;font-size:12.5px;color:var(--muted)}
+.cta .tot strong{font-size:22px;color:var(--ocean);letter-spacing:-.02em}
+.spacer{height:24px;flex:none}
+
+/* Reserva */
+fieldset{border:0;margin:0 0 22px;padding:0;min-width:0}
+legend{font-size:15px;font-weight:700;padding:0;margin-bottom:4px}
+.legend-sub{font-size:13.5px;color:var(--muted);margin:0 0 10px}
+.opt{display:flex;align-items:center;gap:12px;min-height:60px;padding:10px 14px;background:var(--paper);border:1.5px solid var(--line);border-radius:var(--r);margin-bottom:8px;cursor:pointer}
+.opt:has(input:checked){border-color:var(--ocean);box-shadow:0 0 0 1px var(--ocean) inset}
+.opt input{width:20px;height:20px;accent-color:var(--ocean);margin:0;flex:none}
+.opt .ic{color:var(--ocean)}
+.opt b{display:block;font-size:15.5px;font-weight:600}
+.opt small{display:block;font-size:13px;color:var(--muted);margin-top:1px}
+.opt-b{flex:1}
+.bk{margin:0;padding:0;list-style:none;font-size:15px}
+.bk li{display:flex;justify-content:space-between;gap:12px;padding:7px 0}
+.bk li span:first-child small{display:block;color:var(--muted);font-size:12.5px}
+.bk li.sum{border-top:1px solid var(--line);margin-top:4px;padding-top:11px;font-weight:700}
+.bk li.now{font-weight:700;color:var(--ocean);font-size:17px}
+.mini-route{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.mini-route b{font-size:17px}
+.mini-route small{display:block;color:var(--muted);font-size:13.5px;margin-top:2px}
+.banner{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:var(--r);background:var(--ocean-tint);color:var(--ocean);font-size:14px;line-height:1.4}
+.banner .ic{margin-top:1px}
+.banner.warn{background:var(--coral-tint);color:#7A2E1C}
+.banner .link{padding:0;min-height:0;color:inherit}
+.spin{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.45);border-top-color:#fff;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* Pasaje (confirmación) */
+.ticket{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);position:relative}
+.ticket-h{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted)}
+.ticket-h b{color:var(--ink);font-size:14px}
+.ticket-route{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;padding:16px 18px 6px}
+.ticket-route .code{font-size:46px}
+.ticket-route .r{text-align:right}
+.ticket-route small{display:block;font-size:13px;color:var(--muted);margin-top:4px}
+.ticket-route .mid{padding:0 6px 14px;color:var(--muted-2)}
+.ticket-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px 10px;padding:12px 18px 18px}
+.ticket-grid div{font-size:15px;font-weight:700}
+.ticket-grid small{display:block;font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.02em;margin-bottom:2px}
+.perf{position:relative;border-top:2px dashed var(--line-2);margin:0 14px}
+.perf::before,.perf::after{content:"";position:absolute;top:-11px;width:20px;height:20px;border-radius:50%;background:var(--sand);border:1px solid var(--line)}
+.perf::before{left:-26px;clip-path:inset(0 0 0 50%)}
+.perf::after{right:-26px;clip-path:inset(0 50% 0 0)}
+.ticket-foot{padding:14px 18px 16px;font-size:14px}
+.big-ok{display:flex;align-items:center;gap:12px;margin:6px 0 18px}
+.big-ok .mark{width:48px;height:48px;border-radius:50%;border:2.5px solid var(--ocean);display:grid;place-items:center;color:var(--ocean);flex:none}
+.big-ok .mark .ic{width:26px;height:26px;stroke-width:2.4}
+.big-ok h1{font-size:26px;letter-spacing:-.03em;margin:0;color:var(--ocean)}
+.big-ok p{margin:2px 0 0;color:var(--muted);font-size:14.5px}
+.stack{display:grid;gap:10px}
+
+/* Publicar */
+.stepper{display:grid;grid-template-columns:52px 1fr 52px;align-items:center;background:var(--paper);border:1.5px solid var(--line-2);border-radius:var(--r);height:56px}
+.stepper button{height:100%;border:0;background:transparent;color:var(--ocean);display:grid;place-items:center;border-radius:var(--r)}
+.stepper button:disabled{color:var(--line-2);cursor:not-allowed}
+.stepper output{text-align:center;font-size:18px;font-weight:700}
+.checks{display:grid;gap:8px}
+.check{display:flex;align-items:center;gap:12px;min-height:48px;padding:0 14px;background:var(--paper);border:1.5px solid var(--line);border-radius:var(--r);font-size:15.5px;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--ocean);margin:0}
+.calc{background:var(--ocean);color:#fff;border-radius:var(--r);padding:18px;margin-top:6px}
+.calc .lbl{color:#BFD2DF}
+.calc .big{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1;margin:2px 0 6px}
+.calc p{margin:0;font-size:14.5px;line-height:1.45;color:#E2ECF2}
+.calc hr{border:0;border-top:1px solid rgba(255,255,255,.18);margin:16px 0}
+.split{display:flex;gap:4px;margin:10px 0 8px;height:30px}
+.split span{flex:1;border-radius:6px;background:#fff;display:grid;place-items:center;font-size:11.5px;font-weight:700;color:var(--ocean)}
+.split span.me{background:transparent;border:1.5px dashed rgba(255,255,255,.6);color:#fff}
+.calc .facts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.calc .facts div{font-size:13px;color:#BFD2DF}
+.calc .facts b{display:block;font-size:18px;color:#fff;margin-top:2px}
+
+/* Verificación */
+.steps{list-style:none;margin:0;padding:0;border-top:1px solid var(--line);counter-reset:s}
+.steps li{display:grid;grid-template-columns:40px 1fr auto;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.steps .n{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--line-2);display:grid;place-items:center;color:var(--ocean)}
+.steps li.done .n{background:var(--ocean);border-color:var(--ocean);color:#fff}
+.steps b{display:block;font-size:16px;font-weight:600}
+.steps small{display:block;color:var(--muted);font-size:13.5px;line-height:1.35;margin-top:2px}
+.steps .go{min-height:44px;padding:0 16px;border-radius:var(--r);border:1.5px solid var(--ocean);background:transparent;color:var(--ocean);font-weight:700;font-size:15px}
+.steps .ok{display:inline-flex;align-items:center;gap:4px;color:var(--ocean);font-weight:700;font-size:14px;padding-right:4px}
+.progress{height:6px;border-radius:3px;background:var(--sand-2);overflow:hidden;margin:6px 0 4px}
+.progress i{display:block;height:100%;background:var(--ocean);border-radius:3px;transition:width .3s}
+.viewfinder{position:relative;height:200px;border-radius:var(--r);background:#1D2B35;display:grid;place-items:center;margin-bottom:14px;overflow:hidden}
+.viewfinder svg{width:100%;height:100%}
+
+/* Mapa / en curso */
+.map-card{margin:0 20px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--land)}
+.map{display:block;width:100%;height:auto}
+.map .sea{fill:var(--sea)}
+.map .road{fill:none;stroke:#BDB29D;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.map .trip-line{fill:none;stroke:var(--ocean);stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round}
+.map text{font-family:"Inter Tight",sans-serif;font-size:10px;fill:var(--muted)}
+.map text.on{fill:var(--ink);font-weight:700;font-size:11px}
+.map text.water{font-style:italic;fill:#5B7E92;font-size:11px;letter-spacing:.04em}
+.live{display:flex;justify-content:space-between;align-items:flex-end;margin:16px 0 8px}
+.live .big{font-size:30px;font-weight:800;letter-spacing:-.03em;color:var(--ocean);line-height:1}
+.live small{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+.live .r{text-align:right}
+.person{display:flex;gap:12px;align-items:center;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:12px 0 16px}
+.person b{display:block;font-size:16px}
+.person small{color:var(--muted);font-size:13.5px}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.acts .btn{padding:0 10px;font-size:16px;white-space:nowrap}
+.arrived{margin-top:14px}
+
+/* Mis viajes */
+.trips-list{list-style:none;margin:0;padding:0}
+.trips-list li+li{margin-top:10px}
+.tr-row{width:100%;display:grid;grid-template-columns:56px 1fr 20px;gap:14px;align-items:center;padding:12px 14px;background:var(--paper);border:1px solid var(--line);border-radius:var(--r);text-align:left;min-height:72px}
+.tr-row.past{background:transparent}
+.dateblk{text-align:center;border-right:1px solid var(--line);padding-right:12px;line-height:1}
+.dateblk b{display:block;font-size:24px;letter-spacing:-.03em;color:var(--ocean)}
+.dateblk small{font-size:12px;color:var(--muted);text-transform:lowercase}
+.tr-row .t{font-weight:600;font-size:15.5px}
+.tr-row .s{font-size:13.5px;color:var(--muted);margin-top:3px}
+.tr-row .flag{display:inline-block;margin-top:5px;font-size:12.5px;font-weight:700;color:var(--coral-dark)}
+.tr-row .ic{color:var(--muted-2)}
+.empty{padding:22px;border:1.5px dashed var(--line-2);border-radius:var(--r);text-align:center;color:var(--muted);font-size:15px}
+.empty p{margin:0 0 12px}
+
+/* Perfil */
+.prof{display:flex;gap:16px;align-items:center;margin:6px 0 18px}
+.prof h1{font-size:24px;letter-spacing:-.02em;margin:0}
+.prof p{margin:3px 0 0;color:var(--muted);font-size:14px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:18px 0 8px}
+.stats div{padding:12px 0;font-size:12.5px;color:var(--muted)}
+.stats div+div{padding-left:14px;border-left:1px solid var(--line)}
+.stats b{display:block;font-size:22px;color:var(--ocean);letter-spacing:-.02em}
+.menu{list-style:none;margin:0;padding:0}
+.menu button{width:100%;min-height:58px;display:grid;grid-template-columns:24px 1fr auto 20px;gap:12px;align-items:center;padding:0;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left;font-size:16px;font-weight:500}
+.menu .ic{color:var(--ocean)}
+.menu .chev{color:var(--muted-2)}
+.menu .st{font-size:13px;color:var(--muted)}
+.vstate{display:flex;gap:12px;align-items:center;padding:14px;border-radius:var(--r);border:1.5px solid var(--ocean);color:var(--ocean)}
+.vstate b{display:block;font-size:16px}
+.vstate small{display:block;font-size:13px;color:var(--muted)}
+.vstate.no{border-color:var(--coral);background:var(--coral-tint);color:#7A2E1C}
+.vstate .btn{width:auto;min-height:44px;font-size:15px;padding:0 14px;margin-left:auto}
+
+/* Cierre */
+.stars{display:flex;gap:4px;margin:6px 0 4px}
+.stars button{width:52px;height:52px;border:0;background:transparent;border-radius:var(--r);display:grid;place-items:center;color:var(--line-2)}
+.stars button .ic{width:36px;height:36px;stroke-width:1.5}
+.stars button.on{color:var(--coral)}
+.stars button.on .ic{fill:currentColor}
+.rate-lbl{font-size:14px;color:var(--muted);min-height:20px;margin:0 0 14px}
+.receipt{background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:20px 18px;font-size:14px;position:relative}
+.receipt h3{font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 2px;color:var(--muted);font-weight:700}
+.receipt .rc-id{font-size:20px;font-weight:800;color:var(--ocean);letter-spacing:-.01em}
+.receipt dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:14px 0;padding:14px 0;border-top:1.5px dashed var(--line-2);border-bottom:1.5px dashed var(--line-2)}
+.receipt dt{color:var(--muted)}
+.receipt dd{margin:0;text-align:right;font-weight:600}
+.receipt dd small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.receipt .tot{display:flex;justify-content:space-between;font-size:18px;font-weight:800;color:var(--ocean)}
+.receipt .legal{margin:12px 0 0;font-size:11.5px;color:var(--muted);line-height:1.4}
+
+/* Hoja inferior + toast */
+.sheet-wrap{position:absolute;inset:0;z-index:30;display:flex;align-items:flex-end}
+.sheet-wrap[hidden]{display:none}
+.sheet-bg{position:absolute;inset:0;background:rgba(14,32,44,.45);border:0;padding:0;cursor:default}
+.sheet{position:relative;width:100%;max-height:88%;overflow-y:auto;background:var(--sand);border-radius:20px 20px 0 0;padding:10px 20px 26px;animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
+.sheet-grab{width:40px;height:4px;border-radius:2px;background:var(--line-2);margin:0 auto 10px}
+.sheet-h{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.sheet-h h2{font-size:20px;margin:0;letter-spacing:-.02em}
+.sheet p{font-size:15px;line-height:1.45;color:var(--muted);margin:0 0 14px}
+.linkbox{display:flex;align-items:center;gap:8px;background:var(--paper);border:1.5px solid var(--line-2);border-radius:var(--r);padding:6px 6px 6px 14px;margin-bottom:14px;font-weight:600;color:var(--ocean)}
+.linkbox span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.linkbox .btn{width:auto;min-height:44px;font-size:15px;padding:0 14px}
+.sheet .menu button{grid-template-columns:24px 1fr 20px}
+.toast{position:absolute;left:16px;right:16px;top:54px;z-index:40;background:var(--ocean);color:#fff;border-radius:var(--r);padding:13px 16px;font-size:15px;font-weight:600;display:flex;gap:10px;align-items:center;opacity:0;transform:translateY(-8px);transition:opacity .2s,transform .2s;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+@media (max-width:500px){.toast{top:10px}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></symbol>
+    <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v1.5a2.5 2.5 0 0 0 0 5V18a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5.5a2.5 2.5 0 0 0 0-5Z"/><path d="M9.5 8v1.2M9.5 11.4v1.2M9.5 14.8V16"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20c1.4-3.7 4.3-5.6 7.5-5.6s6.1 1.9 7.5 5.6"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M8 20V4M4.5 7.5 8 4l3.5 3.5M16 4v16M12.5 16.5 16 20l3.5-3.5"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></symbol>
+    <symbol id="i-starf" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z"/><path d="m9 12 2.2 2.2L15.5 10"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-car" viewBox="0 0 24 24"><path d="M5 12.5 6.8 7.6A2 2 0 0 1 8.7 6.3h6.6a2 2 0 0 1 1.9 1.3l1.8 4.9"/><rect x="3" y="12.5" width="18" height="5" rx="1.6"/><path d="M6 17.5v2M18 17.5v2M7 15h1.5M15.5 15H17"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18.5" r="2.5"/><path d="m8.2 10.8 7.6-4.1M8.2 13.2l7.6 4.1"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.6"/><path d="m5.6 5.6 3.9 3.9M14.5 14.5l3.9 3.9M18.4 5.6l-3.9 3.9M9.5 14.5l-3.9 3.9"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-card" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/></symbol>
+    <symbol id="i-cash" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6.5 9.5v5M17.5 9.5v5"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M4 8V7a2 2 0 0 1 2-2h11v3"/><rect x="4" y="8" width="16" height="11" rx="2"/><path d="M15.5 13.5H17"/></symbol>
+    <symbol id="i-id" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.6 1.8-2.4 3-2.4s2.4.8 3 2.4M14.5 10h4M14.5 13.5h3"/></symbol>
+    <symbol id="i-face" viewBox="0 0 24 24"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><circle cx="12" cy="10.5" r="3"/><path d="M7.5 17c1-1.8 2.6-2.7 4.5-2.7s3.5.9 4.5 2.7"/></symbol>
+    <symbol id="i-wheel" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.2"/><path d="M3.3 10.5c2.8.7 5.7 1 8.7 1s5.9-.3 8.7-1M12 14.2V21"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 6 6L15 14l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h9"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
+    <symbol id="i-plus2" viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></symbol>
+    <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.8-3.4 3.2-5.2 6-5.2s5.2 1.8 6 5.2M16 5a3 3 0 0 1 0 6M17.5 14c1.8.6 3 2.2 3.5 5"/></symbol>
+  </defs>
+</svg>
+
+<div class="topbar">
+  <span class="topbar-label">Prototipo Falta1</span>
+  <div class="mode" role="radiogroup" aria-label="Modo de uso del prototipo">
+    <button type="button" role="radio" aria-checked="true" data-mode="pasajero">Modo pasajero</button>
+    <button type="button" role="radio" aria-checked="false" data-mode="conductor">Modo conductor</button>
+  </div>
+</div>
+
+<div class="phone-wrap" id="phone-wrap">
+  <div class="phone">
+    <div class="app" id="app">
+      <div class="statusbar" aria-hidden="true">
+        <span id="clock">9:41</span>
+        <svg viewBox="0 0 64 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/><path d="M27 4.2a8 8 0 0 1 11 0l-1.3 1.4a6 6 0 0 0-8.4 0zM29.6 7a4.3 4.3 0 0 1 5.8 0l-1.4 1.4a2.3 2.3 0 0 0-3 0zM32.5 9.4l1.4 1.4-1.4 1.2-1.4-1.2z"/><rect x="42" y="1" width="19" height="10" rx="2.5" fill="none" stroke="#16212A" stroke-width="1.2"/><rect x="44" y="3" width="13" height="6" rx="1.2"/><rect x="62" y="4" width="1.6" height="4" rx=".8"/></svg>
+      </div>
+      <main id="screen" aria-live="off"></main>
+      <nav class="tabbar" aria-label="Navegación principal">
+        <button class="tab" type="button" data-tab="buscar">
+          <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>Buscar</button>
+        <button class="tab" type="button" data-tab="misviajes">
+          <svg class="ic" aria-hidden="true"><use href="#i-ticket"/></svg>Mis viajes</button>
+        <button class="tab" type="button" data-tab="publicar">
+          <svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Publicar</button>
+        <button class="tab" type="button" data-tab="perfil">
+          <svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>Perfil</button>
+      </nav>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      <div class="sheet-wrap" id="sheet" hidden>
+        <button class="sheet-bg" type="button" data-act="sheet-close" aria-label="Cerrar" tabindex="-1"></button>
+        <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" id="sheet-body"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="disclaimer">Prototipo con fines académicos. Datos ficticios.</p>
+
+<noscript><p style="padding:20px">Este prototipo necesita JavaScript.</p></noscript>
+
+<script>
+(function () {
+'use strict';
+
+/* =========================================================
+   REGLA DE PRECIO
+   costoPorKm = 2045 * 0.08 * 1.8  -> $294,5 por km
+   (nafta súper oct-2026, 8 l/100 km, factor de costo total)
+   ========================================================= */
+const COSTO_KM = 2045 * 0.08 * 1.8;
+function precio(km, asientos) {
+  const aporte = COSTO_KM * km / (asientos + 1);
+  const cargo = Math.max(0.15 * aporte, 400);
+  return {
+    aporte: Math.round(aporte),
+    cargo: Math.round(cargo),
+    total: Math.round(aporte + cargo),
+    costo: Math.round(COSTO_KM * km),
+    recupera: Math.round(aporte * asientos)
+  };
+}
+const $ = (s, r) => (r || document).querySelector(s);
+const fmt = n => '$' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ic = (n, cls) => `<svg class="ic ${cls || ''}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const coma = n => n.toFixed(1).replace('.', ',');
+
+/* =========================================================
+   GEOGRAFÍA (km aproximados sobre la Ruta 11)
+   pos = km desde San Clemente; x,y = coordenadas en el mapa
+   ========================================================= */
+const T = {
+  sc:  { n: 'San Clemente del Tuyú', s: 'San Clemente', c: 'SCL', pos: 0,   x: 262, y: 18,  pt: 'Terminal de ómnibus' },
+  lt:  { n: 'Las Toninas',           s: 'Las Toninas',  c: 'LTO', pos: 9,   x: 259, y: 36,  pt: 'Acceso por Ruta 11' },
+  st:  { n: 'Santa Teresita',        s: 'Santa Teresita', c: 'STE', pos: 17, x: 255, y: 52, pt: 'Terminal de ómnibus' },
+  mdt: { n: 'Mar del Tuyú',          s: 'Mar del Tuyú', c: 'MTU', pos: 22,  x: 253, y: 62,  pt: 'Acceso por Ruta 11' },
+  sb:  { n: 'San Bernardo',          s: 'San Bernardo', c: 'SBE', pos: 37,  x: 249, y: 92,  pt: 'Acceso por Ruta 11' },
+  mda: { n: 'Mar de Ajó',            s: 'Mar de Ajó',   c: 'MDJ', pos: 40,  x: 247, y: 98,  pt: 'Terminal de ómnibus' },
+  pin: { n: 'Pinamar',               s: 'Pinamar',      c: 'PIN', pos: 94,  x: 214, y: 206, pt: 'Av. Bunge y Libertador' },
+  car: { n: 'Cariló',                s: 'Cariló',       c: 'CAR', pos: 100, x: 210, y: 218, pt: 'Centro comercial' },
+  vg:  { n: 'Villa Gesell',          s: 'Villa Gesell', c: 'GES', pos: 118, x: 197, y: 254, pt: 'Av. 3 y Paseo 108' },
+  mdp: { n: 'Mar de las Pampas',     s: 'Mar de las Pampas', c: 'MDP', pos: 124, x: 193, y: 266, pt: 'Plaza del centro' },
+  mad: { n: 'General Madariaga',     s: 'Gral. Madariaga', c: 'MAD', pos: null, x: 70, y: 184, pt: 'Terminal de ómnibus' }
+};
+const GROUPS = [
+  ['Partido de la Costa', ['sc', 'lt', 'st', 'mdt', 'sb', 'mda']],
+  ['Pinamar', ['pin', 'car']],
+  ['Villa Gesell', ['vg', 'mdp']],
+  ['General Madariaga', ['mad']]
+];
+// Recorrido de la Ruta 11 (incluye un punto de quiebre sin localidad)
+const ROAD = [['sc',0],['lt',9],['st',17],['mdt',22],['sb',37],['mda',40],[null,67,234,152],['pin',94],['car',100],['vg',118],['mdp',124]]
+  .map(r => r[0] ? { id: r[0], pos: r[1], x: T[r[0]].x, y: T[r[0]].y } : { id: null, pos: r[1], x: r[2], y: r[3] });
+const R74 = [[70, 184], [142, 193], [214, 206]]; // Madariaga -> Pinamar por Ruta 74
+
+function km(a, b) {
+  if (a === b) return 0;
+  if (a === 'mad' || b === 'mad') { const o = a === 'mad' ? b : a; return 37 + Math.abs(T[o].pos - 94); }
+  return Math.abs(T[a].pos - T[b].pos);
+}
+const dur = k => Math.round(k / 72 * 60) + 5;
+function roadBetween(a, b) {
+  const pa = T[a].pos, pb = T[b].pos, lo = Math.min(pa, pb), hi = Math.max(pa, pb);
+  const pts = ROAD.filter(r => r.pos >= lo && r.pos <= hi).map(r => [r.x, r.y]);
+  return pa > pb ? pts.reverse() : pts;
+}
+function routePts(o, d) {
+  if (o === 'mad' || d === 'mad') {
+    const other = o === 'mad' ? d : o;
+    const pts = R74.concat(roadBetween('pin', other).slice(1));
+    return d === 'mad' ? pts.reverse() : pts;
+  }
+  return roadBetween(o, d);
+}
+function intermedias(o, d) {
+  if (o === 'mad' || d === 'mad') {
+    const other = o === 'mad' ? d : o;
+    if (other === 'pin') return [];
+    const mids = ROAD.filter(r => r.id && r.id !== other && r.id !== 'pin' && r.pos > Math.min(94, T[other].pos) && r.pos < Math.max(94, T[other].pos)).map(r => r.id);
+    const list = ['pin'].concat(T[other].pos > 94 ? mids : mids.reverse());
+    return o === 'mad' ? list : list.reverse();
+  }
+  const pa = T[o].pos, pb = T[d].pos;
+  const ids = ROAD.filter(r => r.id && r.pos > Math.min(pa, pb) && r.pos < Math.max(pa, pb)).map(r => r.id);
+  return pa > pb ? ids.reverse() : ids;
+}
+function paradasViaje(o, d) {
+  const all = intermedias(o, d);
+  if (all.length <= 2) return all;
+  const major = all.filter(id => ['st', 'mda', 'pin'].includes(id));
+  return major.slice(0, 2);
+}
+function kmDesde(o, id) { return km(o, id); }
+
+/* =========================================================
+   DATOS FICTICIOS
+   ========================================================= */
+const DRIVERS = [
+  { id: 'mg', n: 'Martín Gómez', ini: 'MG', r: 4.9, v: 214, desde: '2024', auto: 'Volkswagen Gol Trend', anio: 2017, color: 'blanco', pat: 'AB 312 KD', bg: '#DCE6EC',
+    bio: 'Trabajo en Pinamar y vuelvo todos los días a la tarde. Manejo tranquilo, mate en el camino.',
+    rev: [['Lucía B.', 'sep 2026', 5, 'Puntual y manejó tranquilo por la 11. Volvería a viajar.'], ['Nicolás R.', 'sep 2026', 5, 'Me esperó cinco minutos en la terminal sin drama.'], ['Paula M.', 'ago 2026', 4, 'Auto limpio, música bajita. Todo bien.']] },
+  { id: 'fr', n: 'Florencia Ríos', ini: 'FR', r: 4.8, v: 131, desde: '2025', auto: 'Chevrolet Onix', anio: 2020, color: 'gris', pat: 'AE 845 TR', bg: '#F2DED5',
+    bio: 'Docente. Voy y vengo de Madariaga tres veces por semana.',
+    rev: [['Sergio L.', 'oct 2026', 5, 'Avisó por la app que llegaba diez minutos tarde. Se agradece.'], ['Camila F.', 'sep 2026', 5, 'Muy amable, me dejó en la parada que habíamos acordado.'], ['Hernán G.', 'ago 2026', 4, 'Viaje cómodo, el auto tiene aire y anda bárbaro.']] },
+  { id: 'lf', n: 'Lucas Fernández', ini: 'LF', r: 4.7, v: 58, desde: '2025', auto: 'Peugeot 208', anio: 2019, color: 'rojo', pat: 'AD 107 PL', bg: '#E5E0CE',
+    bio: 'Estudio en Pinamar y vuelvo a casa los fines de semana.',
+    rev: [['Agustín P.', 'oct 2026', 5, 'Buena onda, charla justa. Recomendable.'], ['Mariela S.', 'sep 2026', 4, 'Salió a horario. El baúl es chico, avisen si llevan valija.'], ['Tomás V.', 'jul 2026', 5, 'Todo bien, llegamos antes de lo previsto sin correr.']] },
+  { id: 'cm', n: 'Carolina Méndez', ini: 'CM', r: 4.9, v: 302, desde: '2024', auto: 'Fiat Cronos', anio: 2021, color: 'negro', pat: 'AF 266 MZ', bg: '#D8E4DD',
+    bio: 'Enfermera en el hospital de Pinamar. Salgo temprano y vuelvo después del turno.',
+    rev: [['Julieta A.', 'oct 2026', 5, 'Hace este trayecto todos los días, re confiable.'], ['Ramiro D.', 'sep 2026', 5, 'Manejo prolijo, respetó las velocidades todo el camino.'], ['Beatriz N.', 'sep 2026', 5, 'Me ayudó a cargar el bolso. Un placer.']] },
+  { id: 'ds', n: 'Diego Sosa', ini: 'DS', r: 4.6, v: 87, desde: '2025', auto: 'Toyota Etios', anio: 2018, color: 'plateado', pat: 'AC 590 GH', bg: '#E9E1D2',
+    bio: 'Tengo un comercio en Madariaga y voy seguido a la costa a buscar mercadería.',
+    rev: [['Federico C.', 'oct 2026', 4, 'Llegó dos minutos tarde pero avisó.'], ['Silvina R.', 'sep 2026', 5, 'Tranqui, sin vueltas. Muy correcto.'], ['Gonzalo E.', 'ago 2026', 5, 'Mucho mejor que esperar el micro en temporada baja.']] },
+  { id: 'va', n: 'Valeria Acosta', ini: 'VA', r: 4.8, v: 149, desde: '2024', auto: 'Chevrolet Onix', anio: 2018, color: 'azul', pat: 'AC 418 VB', bg: '#EADFC9',
+    bio: 'Vivo en Mar de Ajó y trabajo en Villa Gesell durante la temporada.',
+    rev: [['Daniela O.', 'oct 2026', 5, 'Súper atenta, preguntó si la temperatura estaba bien.'], ['Marcos I.', 'sep 2026', 5, 'Viajé con mi hija y fue muy cuidadosa al manejar.'], ['Rocío T.', 'ago 2026', 4, 'Puntual y el auto impecable.']] }
+];
+const DRV = Object.fromEntries(DRIVERS.map(d => [d.id, d]));
+const ME = { n: 'Agustina Ledesma', first: 'Agustina', ini: 'AL', auto: 'Peugeot 208', anio: 2020, color: 'gris', pat: 'AE 518 LP' };
+
+/* =========================================================
+   FECHAS
+   ========================================================= */
+const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const pad = n => String(n).padStart(2, '0');
+const fTime = d => pad(d.getHours()) + ':' + pad(d.getMinutes());
+const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const fromIso = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const at = (day, hhmm) => { const [h, m] = hhmm.split(':').map(Number); const x = new Date(day); x.setHours(h, m, 0, 0); return x; };
+function fDate(d) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const x = new Date(d); x.setHours(0, 0, 0, 0);
+  const diff = Math.round((x - today) / 86400000);
+  const base = `${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]}`;
+  if (diff === 0) return 'Hoy, ' + base.toLowerCase();
+  if (diff === 1) return 'Mañana, ' + base.toLowerCase();
+  return base;
+}
+const llegada = (salida, k) => new Date(salida.getTime() + dur(k) * 60000);
+const TODAY = new Date(); TODAY.setHours(0, 0, 0, 0);
+
+/* =========================================================
+   ESTADO
+   ========================================================= */
+const S = {
+  mode: 'pasajero',
+  stack: ['buscar'],
+  search: { o: 'vg', d: 'pin', fecha: iso(TODAY), ahora: false },
+  results: [],
+  trips: {},
+  sel: null,
+  pay: { cargo: 'mp', aporte: 'app' },
+  verif: { dni: false, selfie: false, licencia: false, seguro: false },
+  pub: { o: 'pin', d: 'vg', paradas: [], fecha: iso(addDays(TODAY, 1)), hora: '18:30', seats: 3 },
+  bookings: [],
+  published: [],
+  active: null,
+  rating: { v: 0, txt: '' },
+  simP: {},
+  lastBooking: null,
+  lastPub: null
+};
+function addTrip(t) { t.llegada = llegada(t.salida, t.km); S.trips[t.id] = t; return t; }
+
+// Viajes precargados (para que Mis viajes tenga historia)
+addTrip({ id: 'pre-1', drv: DRV.cm, o: 'vg', d: 'pin', km: 24, seats: 3, libres: 1, salida: at(addDays(TODAY, 1), '07:10') });
+addTrip({ id: 'past-1', drv: DRV.mg, o: 'pin', d: 'vg', km: 24, seats: 3, libres: 0, salida: at(addDays(TODAY, -11), '18:30') });
+addTrip({ id: 'past-2', drv: DRV.ds, o: 'mad', d: 'pin', km: 37, seats: 3, libres: 0, salida: at(addDays(TODAY, -3), '08:15') });
+S.bookings.push(
+  { id: 'b1', tripId: 'pre-1', codigo: 'F1-2391', cargo: 'mp', aporte: 'efectivo', estado: 'proximo' },
+  { id: 'b0', tripId: 'past-2', codigo: 'F1-1872', cargo: 'tarjeta', aporte: 'app', estado: 'finalizado', rating: 0 },
+  { id: 'b00', tripId: 'past-1', codigo: 'F1-1544', cargo: 'mp', aporte: 'app', estado: 'finalizado', rating: 5, comment: 'Excelente, muy puntual.' }
+);
+S.published.push({ id: 'p1', o: 'pin', d: 'vg', salida: at(TODAY, '18:30'), seats: 3, paradas: ['car'], estado: 'proximo',
+  pasajeros: [{ n: 'Romina Paz', ini: 'RP' }, { n: 'Ezequiel Torres', ini: 'ET' }] });
+
+/* Generador de resultados de búsqueda */
+const SLOTS = ['07:10', '08:45', '13:20', '18:30'];
+const SLOTS_HOY = ['06:50', '07:10', '08:45', '10:30', '13:20', '16:40', '18:30', '20:15', '21:40'];
+const SEATS = [[3, 2], [2, 1], [4, 3], [3, 1]]; // [ofrecidos, libres]
+function hash(s) { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; }
+function buscar() {
+  const { o, d, fecha, ahora } = S.search;
+  const k = km(o, d), h = hash(o + d), now = new Date();
+  const day = ahora ? now : fromIso(fecha);
+  // Si la fecha es hoy, solo mostramos salidas que todavía no pasaron
+  const slots = ahora ? [0, 1, 2, 3] : (iso(day) === iso(now)
+    ? SLOTS_HOY.filter(x => at(day, x) - now > 15 * 60000).slice(0, 4)
+    : SLOTS);
+  S.results = slots.map((slot, i) => {
+    let salida;
+    if (ahora) { salida = new Date(now); salida.setSeconds(0, 0); salida.setMinutes(salida.getMinutes() + [9, 22, 36, 51][i]); }
+    else salida = at(day, slot);
+    return addTrip({ id: `${o}-${d}-${iso(day)}-${i}${ahora ? 'n' : ''}`, drv: DRIVERS[(h + i) % 6], o, d, km: k,
+      seats: SEATS[i][0], libres: SEATS[i][1], salida, ahora });
+  });
+}
+
+/* =========================================================
+   NAVEGACIÓN
+   ========================================================= */
+const screenEl = $('#screen');
+const TAB_OF = { buscar: 'buscar', resultados: 'buscar', detalle: 'buscar', reserva: 'buscar', confirmacion: 'buscar',
+  misviajes: 'misviajes', encurso: 'misviajes', cierre: 'misviajes', publicar: 'publicar', publicado: 'publicar', perfil: 'perfil', verificacion: 'perfil' };
+const cur = () => S.stack[S.stack.length - 1];
+function render(focus) {
+  const id = cur();
+  closeSheet(true);
+  screenEl.innerHTML = VIEWS[id]();
+  screenEl.scrollTop = 0;
+  const root = TAB_OF[S.stack[0]];
+  document.querySelectorAll('.tab').forEach(b => {
+    if (b.dataset.tab === root) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
+  if (focus !== false) {
+    const h = screenEl.querySelector('h1');
+    if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
+  }
+  if (id === 'encurso') startSim();
+}
+function go(id) { S.stack.push(id); render(); }
+function back() { if (S.stack.length > 1) S.stack.pop(); render(); }
+function tab(id) { S.stack = [id]; render(); }
+
+function hdr(title, sub, right) {
+  const canBack = S.stack.length > 1;
+  return `<header class="hdr${canBack ? '' : ' root'}">
+    ${canBack ? `<button class="icon-btn" type="button" data-act="back" aria-label="Volver">${ic('back')}</button>` : ''}
+    <div class="hdr-t"><h1 class="h1">${title}</h1>${sub ? `<p class="hdr-sub">${sub}</p>` : ''}</div>${right || ''}
+  </header>`;
+}
+function selectTowns(id, val) {
+  return `<select id="${id}" class="control">${GROUPS.map(([g, ids]) =>
+    `<optgroup label="${g}">${ids.map(t => `<option value="${t}"${t === val ? ' selected' : ''}>${T[t].n}</option>`).join('')}</optgroup>`).join('')}</select>`;
+}
+const avatar = (p, cls) => `<span class="av ${cls || ''}" style="background:${p.bg || '#DCE6EC'}" aria-hidden="true">${p.ini}</span>`;
+const seatsHtml = (offered, libres) => `<span class="seats" aria-hidden="true">${Array.from({ length: offered }, (_, i) => `<span class="seat${i < offered - libres ? ' taken' : ''}"></span>`).join('')}</span>`;
+const starsSm = n => `<span class="stars-sm" aria-label="${n} de 5 estrellas">${[1, 2, 3, 4, 5].map(i => `<svg class="ic${i > n ? ' off' : ''}" aria-hidden="true"><use href="#i-starf"/></svg>`).join('')}</span>`;
+const payLbl = { mp: 'Mercado Pago', tarjeta: 'Visa •••• 4821', efectivo: 'Efectivo al llegar' };
+const isVerified = () => S.verif.dni && S.verif.selfie;
+const isDriverOk = () => S.verif.licencia && S.verif.seguro;
+const foot = '<p class="foot">Prototipo con fines académicos. Datos ficticios.</p>';
+
+/* =========================================================
+   PANTALLAS
+   ========================================================= */
+const VIEWS = {};
+
+/* 1. Inicio / Buscar */
+const SAVED = [['vg', 'pin', 'Al trabajo'], ['mad', 'pin', 'Facultad'], ['mda', 'pin', ''], ['sc', 'vg', '']];
+VIEWS.buscar = () => {
+  const s = S.search;
+  return `<div class="scr">
+  <header class="hdr root">
+    <span class="logo" role="img" aria-label="Falta1">Falta<span class="one">1</span></span>
+    <button class="icon-btn" type="button" data-tab-go="perfil" aria-label="Tu perfil">${avatar({ ini: ME.ini, bg: '#F2DED5' }, 'sm')}</button>
+  </header>
+  <div class="pad">
+    <h1 class="display">¿A dónde vas, ${ME.first}?</h1>
+    <p class="lede">Viajá con gente que ya hace ese camino por la costa y compartí los gastos.</p>
+    <form id="f-buscar" novalidate>
+      <div class="route-fields">
+        <div class="rail" aria-hidden="true"><span class="dot"></span><span class="bar"></span><span class="dot d"></span></div>
+        <div>
+          <div class="field"><label for="b-o">Origen</label>${selectTowns('b-o', s.o)}</div>
+          <div class="field"><label for="b-d">Destino</label>${selectTowns('b-d', s.d)}</div>
+        </div>
+        <button type="button" class="icon-btn swap" data-act="swap" aria-label="Invertir origen y destino">${ic('swap')}</button>
+      </div>
+      <div class="seg" role="radiogroup" aria-label="Cuándo salís">
+        <button type="button" role="radio" aria-checked="${!s.ahora}" data-act="when" data-v="prog">${ic('cal', 'sm')}Programado</button>
+        <button type="button" role="radio" aria-checked="${s.ahora}" data-act="when" data-v="ahora">${ic('bolt', 'sm')}Salgo ahora</button>
+      </div>
+      ${s.ahora
+        ? `<p class="hint">Te mostramos los viajes que salen en la próxima hora desde ${T[s.o].s}.</p>`
+        : `<div class="field"><label for="b-f">Fecha</label><input type="date" id="b-f" class="control" value="${s.fecha}" min="${iso(TODAY)}" required></div>`}
+      <p class="err" id="b-err" role="alert"></p>
+      <button class="btn btn-primary" type="submit">Buscar viajes</button>
+    </form>
+  </div>
+  <section class="pad block" aria-labelledby="h-saved">
+    <h2 class="h2" id="h-saved">Tus rutas guardadas</h2>
+    <ul class="saved">${SAVED.map(([o, d, tag]) => {
+      const k = km(o, d), p = precio(k, 3);
+      return `<li><button type="button" data-act="saved" data-o="${o}" data-d="${d}">
+        <span><b>${T[o].s} → ${T[d].s}</b><small>${k} km${tag ? ' · ' + tag : ''}</small></span>
+        <span class="amt">${fmt(p.total)}</span>${ic('chev', 'sm')}</button></li>`;
+    }).join('')}</ul>
+    <p class="note">Precio por asiento en un auto con 3 lugares ofrecidos, cargo de servicio incluido.</p>
+  </section>
+  ${foot}
+  </div>`;
+};
+
+/* 2. Resultados */
+VIEWS.resultados = () => {
+  const s = S.search, k = km(s.o, s.d);
+  const when = s.ahora ? 'Saliendo ahora' : fDate(fromIso(s.fecha));
+  return `<div class="scr">
+  ${hdr(`${T[s.o].s} → ${T[s.d].s}`, `${when} · ${k} km por Ruta 11`)}
+  <div class="pad">
+    ${S.results.length ? `<p class="res-meta"><span>${S.results.length} ${S.results.length === 1 ? 'viaje publicado' : 'viajes publicados'}</span><span>Ordenados por horario</span></p>`
+      : `<div class="empty" style="margin-top:8px"><p>No quedan viajes para hoy en este trayecto.</p><button class="btn btn-dark" type="button" data-act="tomorrow">Ver viajes de mañana</button></div>`}
+    ${S.results.map(t => {
+      const p = precio(t.km, t.seats), mins = Math.round((t.salida - new Date()) / 60000);
+      return `<button type="button" class="trip" data-act="open-trip" data-id="${t.id}"
+        aria-label="${fTime(t.salida)}, ${esc(t.drv.n)}, ${t.libres} asientos libres, total ${fmt(p.total)}">
+        <span class="trip-top">
+          <span class="times"><span>${fTime(t.salida)}</span><span>${fTime(t.llegada)}</span></span>
+          <span class="stops"><b>${T[t.o].s}${t.ahora ? ` <span class="when-now">· sale en ${mins} min</span>` : ''}<br><span>${T[t.o].pt}</span></b><b>${T[t.d].s}<br><span>${T[t.d].pt}</span></b></span>
+          <span class="seatbox">${seatsHtml(t.seats, t.libres)}${t.libres} ${t.libres === 1 ? 'libre' : 'libres'}</span>
+        </span>
+        <span class="trip-drv">${avatar(t.drv)}
+          <span><span class="nm">${t.drv.n}</span>
+          <span class="sub"><span class="rate">${ic('starf')}${coma(t.drv.r)}</span><span class="ver">${ic('shield')}Verificado</span><span>${t.drv.auto}</span></span></span>
+        </span>
+        <span class="trip-price"><span class="eq">Aporte ${fmt(p.aporte)} + cargo ${fmt(p.cargo)} =</span><strong>${fmt(p.total)}</strong></span>
+      </button>`;
+    }).join('')}
+    <p class="note">El aporte cubre nafta y gastos del auto, dividido entre el conductor y los asientos que ofrece. El cargo de servicio es de Falta1 (15%, mínimo $400).</p>
+  </div>
+  <div class="spacer"></div>
+  </div>`;
+};
+
+/* 3. Detalle */
+VIEWS.detalle = () => {
+  const t = S.trips[S.sel], d = t.drv, p = precio(t.km, t.seats);
+  const mids = paradasViaje(t.o, t.d);
+  const stopTime = id => fTime(new Date(t.salida.getTime() + Math.round(kmDesde(t.o, id) / 72 * 60) * 60000));
+  return `<div class="scr">
+  ${hdr('Detalle del viaje', fDate(t.salida))}
+  <div class="pad">
+    <div class="hero-route" aria-label="${T[t.o].n} a ${T[t.d].n}">
+      <span class="code" aria-hidden="true">${T[t.o].c}</span><span class="arrow" aria-hidden="true">${ic('arrow')}</span><span class="code" aria-hidden="true">${T[t.d].c}</span>
+    </div>
+    <p class="hero-sub">${t.km} km · ${dur(t.km)} min aprox. · ${t.libres} de ${t.seats} asientos libres</p>
+
+    <section class="block" aria-labelledby="h-rec">
+      <h2 class="h2" id="h-rec">Recorrido</h2>
+      <ol class="tl">
+        <li><span class="tl-t">${fTime(t.salida)}</span><span class="tl-dot"></span><div><b>${T[t.o].n}</b><small>Subida: ${T[t.o].pt}</small></div></li>
+        ${mids.map(id => `<li class="mid"><span class="tl-t muted">${stopTime(id)}</span><span class="tl-dot"></span><div><b>${T[id].n}</b><small>Parada · ${T[id].pt}</small></div></li>`).join('')}
+        <li class="end"><span class="tl-t">${fTime(t.llegada)}</span><span class="tl-dot"></span><div><b>${T[t.d].n}</b><small>Bajada: ${T[t.d].pt}</small></div></li>
+      </ol>
+    </section>
+
+    <section class="block" aria-labelledby="h-auto">
+      <h2 class="h2" id="h-auto">Auto</h2>
+      <div class="panel"><dl class="kv">
+        <dt>Modelo</dt><dd>${d.auto} ${d.anio}</dd>
+        <dt>Color</dt><dd style="text-transform:capitalize">${d.color}</dd>
+        <dt>Patente</dt><dd>${d.pat}</dd>
+        <dt>Equipaje</dt><dd>1 bolso por persona</dd>
+      </dl></div>
+    </section>
+
+    <section class="block" aria-labelledby="h-cond">
+      <h2 class="h2" id="h-cond">Conductor</h2>
+      <div class="panel">
+        <div class="drv-head">${avatar(d, 'lg')}
+          <div><div class="nm">${d.n}</div>
+          <div class="sub"><span class="rate">${ic('starf')}${coma(d.r)}</span><span>${d.v} viajes</span><span>Desde ${d.desde}</span></div></div>
+        </div>
+        <p class="bio">${d.bio}</p>
+        <ul class="creds">
+          <li>${ic('shield')}Identidad verificada (DNI y selfie)</li>
+          <li>${ic('wheel')}Licencia de conducir vigente</li>
+          <li>${ic('doc')}Seguro y VTV al día</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="block" aria-labelledby="h-rev">
+      <h2 class="h2" id="h-rev">Reseñas de pasajeros</h2>
+      <ul class="reviews">${d.rev.map(([a, f, n, txt]) => `<li><p>“${txt}”</p><small>${starsSm(n)}<span>${a} · ${f}</span></small></li>`).join('')}</ul>
+    </section>
+
+    <section class="block" aria-labelledby="h-pr">
+      <h2 class="h2" id="h-pr">Precio por asiento</h2>
+      <ul class="bk">
+        <li><span>Aporte al conductor<small>${t.km} km × $294,5 ÷ ${t.seats + 1} personas</small></span><span>${fmt(p.aporte)}</span></li>
+        <li><span>Cargo de servicio<small>15% del aporte, mínimo $400</small></span><span>${fmt(p.cargo)}</span></li>
+        <li class="sum"><span>Total</span><span>${fmt(p.total)}</span></li>
+      </ul>
+    </section>
+  </div>
+  <div class="spacer"></div>
+  <div class="cta">
+    <span class="tot"><small>Total por asiento</small><strong>${fmt(p.total)}</strong></span>
+    <button class="btn btn-primary" type="button" data-act="reservar" ${t.libres ? '' : 'disabled'}>${t.libres ? 'Reservar asiento' : 'Sin lugares'}</button>
+  </div>
+  </div>`;
+};
+
+/* 4. Reserva y pago */
+function bkHtml(p) {
+  const efectivo = S.pay.aporte === 'efectivo';
+  const ahora = efectivo ? p.cargo : p.total;
+  return `<ul class="bk">
+    <li><span>Aporte al conductor<small>${efectivo ? 'En efectivo al llegar' : 'Con ' + payLbl[S.pay.cargo]}</small></span><span>${fmt(p.aporte)}</span></li>
+    <li><span>Cargo de servicio<small>Con ${payLbl[S.pay.cargo]}</small></span><span>${fmt(p.cargo)}</span></li>
+    <li class="sum"><span>Total del viaje</span><span>${fmt(p.total)}</span></li>
+    <li class="now"><span>Pagás ahora en la app</span><span>${fmt(ahora)}</span></li>
+    ${efectivo ? `<li><span>Al llegar, en efectivo</span><span>${fmt(p.aporte)}</span></li>` : ''}
+  </ul>`;
+}
+VIEWS.reserva = () => {
+  const t = S.trips[S.sel], p = precio(t.km, t.seats);
+  const radio = (name, v, icon, title, sub) =>
+    `<label class="opt"><input type="radio" name="${name}" value="${v}"${S.pay[name] === v ? ' checked' : ''}>${ic(icon)}<span class="opt-b"><b>${title}</b><small>${sub}</small></span></label>`;
+  return `<div class="scr">
+  ${hdr('Reservá tu asiento', '1 asiento · ' + fDate(t.salida))}
+  <div class="pad">
+    <div class="panel mini-route" style="margin-bottom:22px">
+      <div><b>${T[t.o].s} → ${T[t.d].s}</b><small>${fTime(t.salida)} – ${fTime(t.llegada)} · con ${t.drv.n.split(' ')[0]} · ${t.drv.auto.split(' ').slice(1).join(' ')}</small></div>
+      ${avatar(t.drv)}
+    </div>
+    ${isVerified() ? '' : `<div class="banner warn" style="margin-bottom:22px">${ic('shield')}<span>Antes de subir al auto vas a tener que verificar tu identidad. <button class="link" type="button" data-act="goto-verif">Verificar ahora</button></span></div>`}
+    <fieldset>
+      <legend>Aporte al conductor · ${fmt(p.aporte)}</legend>
+      <p class="legend-sub">Elegí cómo le pagás a ${t.drv.n.split(' ')[0]}.</p>
+      ${radio('aporte', 'app', 'wallet', 'En la app', 'Se cobra junto con el cargo de servicio')}
+      ${radio('aporte', 'efectivo', 'cash', 'En efectivo al llegar', 'Se lo das a quien maneja al bajar')}
+    </fieldset>
+    <fieldset>
+      <legend>Medio de pago</legend>
+      <p class="legend-sub">El cargo de servicio (${fmt(p.cargo)}) siempre se paga en la app.</p>
+      ${radio('cargo', 'mp', 'wallet', 'Mercado Pago', 'Cuenta vinculada · agus.ledesma')}
+      ${radio('cargo', 'tarjeta', 'card', 'Tarjeta de débito Visa', 'Terminada en 4821')}
+    </fieldset>
+    <section aria-labelledby="h-res"><h2 class="h2" id="h-res">Resumen</h2><div id="bk">${bkHtml(p)}</div></section>
+    <p class="note">Podés cancelar sin costo hasta 2 horas antes de la salida. Simulación: no se realiza ningún cobro real.</p>
+  </div>
+  <div class="spacer"></div>
+  <div class="cta"><button class="btn btn-primary" type="button" id="btn-confirm" data-act="confirmar">Confirmar reserva · ${fmt(S.pay.aporte === 'efectivo' ? p.cargo : p.total)}</button></div>
+  </div>`;
+};
+
+/* 4b. Confirmación */
+VIEWS.confirmacion = () => {
+  const b = S.bookings.find(x => x.id === S.lastBooking), t = S.trips[b.tripId], p = precio(t.km, t.seats);
+  return `<div class="scr">
+  ${hdr('Reserva confirmada')}
+  <div class="pad">
+    <div class="big-ok"><span class="mark">${ic('check')}</span><div><h2 style="font-size:24px;margin:0;letter-spacing:-.03em;color:var(--ocean)">¡Listo, tenés lugar!</h2><p>Le avisamos a ${t.drv.n.split(' ')[0]} que viajás.</p></div></div>
+    ${ticketHtml(b, t, p)}
+    <div class="stack" style="margin-top:20px">
+      <button class="btn btn-primary" type="button" data-act="start-trip" data-id="${b.id}">Empezar viaje</button>
+      <button class="btn btn-ghost" type="button" data-act="tab" data-v="misviajes">Ver en Mis viajes</button>
+    </div>
+    <p class="note">“Empezar viaje” adelanta la simulación al momento de la salida.</p>
+  </div>
+  <div class="spacer"></div>
+  </div>`;
+};
+function ticketHtml(b, t, p) {
+  const ahora = b.aporte === 'efectivo' ? p.cargo : p.total;
+  return `<article class="ticket" aria-label="Pasaje ${b.codigo}">
+    <div class="ticket-h"><span class="logo" style="font-size:18px" aria-hidden="true">Falta<span class="one">1</span></span><span>Reserva <b>${b.codigo}</b></span></div>
+    <div class="ticket-route">
+      <div><span class="code">${T[t.o].c}</span><small>${T[t.o].s}</small></div>
+      <span class="mid">${ic('arrow')}</span>
+      <div class="r"><span class="code">${T[t.d].c}</span><small>${T[t.d].s}</small></div>
+    </div>
+    <div class="ticket-grid">
+      <div><small>FECHA</small>${t.salida.getDate()} ${MESES[t.salida.getMonth()]}</div>
+      <div><small>SALE</small>${fTime(t.salida)}</div>
+      <div><small>LLEGA</small>${fTime(t.llegada)}</div>
+      <div><small>CONDUCTOR</small>${t.drv.n.split(' ')[0]} ${t.drv.n.split(' ')[1][0]}.</div>
+      <div><small>AUTO</small>${t.drv.auto.split(' ').slice(1).join(' ')}</div>
+      <div><small>PATENTE</small>${t.drv.pat}</div>
+    </div>
+    <div class="perf" aria-hidden="true"></div>
+    <div class="ticket-foot">
+      <ul class="bk">
+        <li><span>Encuentro</span><span>${T[t.o].pt}</span></li>
+        <li><span>Pagado (${payLbl[b.cargo]})</span><span>${fmt(ahora)}</span></li>
+        ${b.aporte === 'efectivo' ? `<li><span>Efectivo al llegar</span><span>${fmt(p.aporte)}</span></li>` : ''}
+      </ul>
+    </div>
+  </article>`;
+}
+
+/* 5. Publicar viaje */
+VIEWS.publicar = () => {
+  if (S.mode !== 'conductor') {
+    return `<div class="scr">${hdr('Publicar viaje')}
+    <div class="pad">
+      <p class="display" style="font-size:26px">¿Vas a hacer un trayecto con lugares libres?</p>
+      <p class="lede">Publicalo en Falta1 y compartí la nafta con gente que va para el mismo lado. Para publicar, pasá a modo conductor.</p>
+      <ol class="steps" style="margin-bottom:22px">
+        <li><span class="n">1</span><span><b>Cargás origen, destino y horario</b><small>El trayecto que ya ibas a hacer.</small></span><span></span></li>
+        <li><span class="n">2</span><span><b>Falta1 calcula el aporte</b><small>Cubre gastos, no es una tarifa.</small></span><span></span></li>
+        <li><span class="n">3</span><span><b>Los pasajeros reservan</b><small>Te avisamos con cada reserva.</small></span><span></span></li>
+      </ol>
+      <button class="btn btn-primary" type="button" data-act="set-mode" data-v="conductor">Pasar a modo conductor</button>
+    </div>${foot}</div>`;
+  }
+  const s = S.pub;
+  return `<div class="scr">
+  ${hdr('Publicar viaje', 'Modo conductor')}
+  <div class="pad">
+    <p class="lede" style="margin-top:4px">Publicá un trayecto que ya ibas a hacer. El aporte lo calcula Falta1 para que sea un gasto compartido.</p>
+    <form id="f-pub" novalidate>
+      <div class="route-fields">
+        <div class="rail" aria-hidden="true"><span class="dot"></span><span class="bar"></span><span class="dot d"></span></div>
+        <div>
+          <div class="field"><label for="p-o">Origen</label>${selectTowns('p-o', s.o)}</div>
+          <div class="field"><label for="p-d">Destino</label>${selectTowns('p-d', s.d)}</div>
+        </div>
+        <button type="button" class="icon-btn swap" data-act="pswap" aria-label="Invertir origen y destino">${ic('swap')}</button>
+      </div>
+      <fieldset id="p-par">${paradasHtml()}</fieldset>
+      <div class="row2">
+        <div class="field"><label for="p-f">Fecha</label><input type="date" id="p-f" class="control" value="${s.fecha}" min="${iso(TODAY)}"></div>
+        <div class="field"><label for="p-h">Hora de salida</label><input type="time" id="p-h" class="control" value="${s.hora}"></div>
+      </div>
+      <div class="field">
+        <span class="lbl" id="l-seats">Asientos ofrecidos</span>
+        <div class="stepper" role="group" aria-labelledby="l-seats">
+          <button type="button" data-act="seats" data-v="-1" aria-label="Un asiento menos"${s.seats <= 1 ? ' disabled' : ''}>${ic('minus')}</button>
+          <output id="p-seats" aria-live="polite">${s.seats} ${s.seats === 1 ? 'asiento' : 'asientos'}</output>
+          <button type="button" data-act="seats" data-v="1" aria-label="Un asiento más"${s.seats >= 4 ? ' disabled' : ''}>${ic('plus2')}</button>
+        </div>
+      </div>
+      <div id="p-sum" aria-live="polite">${pubSumHtml()}</div>
+      ${isDriverOk() ? '' : `<div class="banner warn" style="margin-top:16px">${ic('wheel')}<span>Para que tu viaje aparezca en las búsquedas falta verificar licencia, seguro y VTV. <button class="link" type="button" data-act="goto-verif">Verificar ahora</button></span></div>`}
+    </form>
+  </div>
+  <div class="spacer"></div>
+  <div class="cta"><button class="btn btn-primary" type="button" id="btn-pub" data-act="publicar"${S.pub.o === S.pub.d ? ' disabled' : ''}>Publicar viaje</button></div>
+  </div>`;
+};
+function paradasHtml() {
+  const s = S.pub;
+  if (s.o === s.d) return '';
+  const mids = intermedias(s.o, s.d);
+  s.paradas = s.paradas.filter(x => mids.includes(x));
+  return `<legend>Paradas en el camino <span class="muted" style="font-weight:500">(opcional)</span></legend>
+    ${mids.length ? `<p class="legend-sub">Marcá dónde podés levantar o dejar pasajeros.</p><div class="checks">${mids.map(id =>
+      `<label class="check"><input type="checkbox" name="parada" value="${id}"${s.paradas.includes(id) ? ' checked' : ''}>${T[id].n}</label>`).join('')}</div>`
+    : '<p class="legend-sub">No hay localidades intermedias en este trayecto.</p>'}`;
+}
+function pubSumHtml() {
+  const s = S.pub;
+  if (s.o === s.d) return '<p class="err">Elegí un destino distinto al origen.</p>';
+  const k = km(s.o, s.d), p = precio(k, s.seats);
+  const pct = Math.round(s.seats / (s.seats + 1) * 100);
+  return `<div class="calc">
+    <span class="lbl">Aporte por asiento</span>
+    <div class="big">${fmt(p.aporte)}</div>
+    <p>Cada pasajero paga ${fmt(p.total)}: tu aporte más ${fmt(p.cargo)} de cargo de servicio que cobra Falta1.</p>
+    <hr>
+    <span class="lbl">Si se llenan los ${s.seats} ${s.seats === 1 ? 'asiento' : 'asientos'}</span>
+    <div class="split" aria-hidden="true">${Array.from({ length: s.seats }, (_, i) => `<span>P${i + 1}</span>`).join('')}<span class="me">Vos</span></div>
+    <p>Recuperás <b style="color:#fff">${fmt(p.recupera)}</b> de los ${fmt(p.costo)} que te cuesta el viaje: el ${pct}%. El resto lo ponés vos, como un pasajero más.</p>
+    <div class="facts" style="margin-top:14px"><div>Distancia<b>${k} km</b></div><div>Costo por km<b>$294,5</b></div></div>
+  </div>`;
+}
+
+/* 5b. Publicado */
+VIEWS.publicado = () => {
+  const pb = S.published.find(x => x.id === S.lastPub), k = km(pb.o, pb.d), p = precio(k, pb.seats);
+  return `<div class="scr">
+  ${hdr('Viaje publicado')}
+  <div class="pad">
+    <div class="big-ok"><span class="mark">${ic('check')}</span><div><h2 style="font-size:24px;margin:0;letter-spacing:-.03em;color:var(--ocean)">Tu viaje ya está en Falta1</h2><p>Te avisamos con cada reserva.</p></div></div>
+    <article class="ticket">
+      <div class="ticket-h"><span>Publicación</span><b>${fDate(pb.salida)}</b></div>
+      <div class="ticket-route">
+        <div><span class="code">${T[pb.o].c}</span><small>${T[pb.o].s}</small></div><span class="mid">${ic('arrow')}</span>
+        <div class="r"><span class="code">${T[pb.d].c}</span><small>${T[pb.d].s}</small></div>
+      </div>
+      <div class="ticket-grid">
+        <div><small>SALE</small>${fTime(pb.salida)}</div><div><small>ASIENTOS</small>${pb.seats}</div><div><small>APORTE</small>${fmt(p.aporte)}</div>
+      </div>
+      <div class="perf" aria-hidden="true"></div>
+      <div class="ticket-foot"><ul class="bk">
+        <li><span>Paradas</span><span>${pb.paradas.length ? pb.paradas.map(x => T[x].s).join(', ') : 'Sin paradas'}</span></li>
+        <li><span>Recuperás con el auto lleno</span><span>${fmt(p.recupera)}</span></li>
+      </ul></div>
+    </article>
+    <div class="stack" style="margin-top:20px">
+      <button class="btn btn-primary" type="button" data-act="tab" data-v="misviajes">Ver en Mis viajes</button>
+      <button class="btn btn-ghost" type="button" data-act="tab" data-v="publicar">Publicar otro viaje</button>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  </div>`;
+};
+
+/* 6. Verificación */
+const VSTEPS = {
+  dni:      { t: 'Foto del DNI', d: 'Frente y dorso, con buena luz.', i: 'id', cap: 'Ubicá el frente del DNI dentro del marco.', btn: 'Capturar DNI', ok: 'DNI validado' },
+  selfie:   { t: 'Selfie', d: 'La comparamos con la foto del DNI.', i: 'face', cap: 'Centrá tu cara en el óvalo y mirá a la cámara.', btn: 'Tomar selfie', ok: 'Selfie validada' },
+  licencia: { t: 'Licencia de conducir', d: 'Vigente, categoría B1 o superior.', i: 'wheel', cap: 'Ubicá el frente de la licencia dentro del marco.', btn: 'Capturar licencia', ok: 'Licencia validada' },
+  seguro:   { t: 'Seguro y VTV', d: 'Póliza vigente y oblea de la VTV.', i: 'doc', cap: 'Subí la póliza del seguro y una foto de la oblea de la VTV.', btn: 'Subir documentos', ok: 'Seguro y VTV validados' }
+};
+VIEWS.verificacion = () => {
+  const keys = S.mode === 'conductor' ? ['dni', 'selfie', 'licencia', 'seguro'] : ['dni', 'selfie'];
+  const done = keys.filter(k => S.verif[k]).length, all = done === keys.length;
+  return `<div class="scr">
+  ${hdr('Verificación', S.mode === 'conductor' ? 'Pasajero y conductor' : 'Identidad')}
+  <div class="pad">
+    <p class="lede" style="margin-top:4px">Verificamos a todas las personas que viajan en Falta1. Lo hacés una sola vez y tus datos se usan solo para validar que sos vos.</p>
+    <div class="lbl">${done} de ${keys.length} pasos completos</div>
+    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="${keys.length}" aria-valuenow="${done}" aria-label="Progreso de verificación"><i style="width:${done / keys.length * 100}%"></i></div>
+    <ol class="steps" style="margin-top:16px">${keys.map((k, i) => {
+      const v = VSTEPS[k], ok = S.verif[k];
+      return `<li class="${ok ? 'done' : ''}"><span class="n" aria-hidden="true">${ok ? ic('check', 'sm') : i + 1}</span>
+        <span><b>${v.t}</b><small>${v.d}</small></span>
+        ${ok ? `<span class="ok">${ic('check', 'sm')}Listo</span>` : `<button class="go" type="button" data-act="verif" data-k="${k}" aria-label="Empezar: ${v.t}">Empezar</button>`}</li>`;
+    }).join('')}</ol>
+    ${all ? `<div class="vstate" style="margin-top:20px">${ic('shield')}<div><b>${S.mode === 'conductor' ? 'Identidad y documentación verificadas' : 'Identidad verificada'}</b><small>Ya aparece en tu perfil.</small></div></div>
+      <button class="btn btn-dark" type="button" data-act="back" style="margin-top:14px">Volver</button>`
+    : ''}
+    ${S.mode === 'pasajero' ? `<p class="note" style="margin-top:18px">¿Vas a manejar? <button class="link" type="button" data-act="set-mode" data-v="conductor" data-keep="1">Pasá a modo conductor</button> para sumar licencia, seguro y VTV.</p>` : ''}
+  </div>
+  ${foot}
+  </div>`;
+};
+
+/* 7. Viaje en curso */
+function activeInfo() {
+  const a = S.active;
+  if (a.type === 'b') {
+    const b = S.bookings.find(x => x.id === a.id), t = S.trips[b.tripId];
+    return { key: 'b' + b.id, role: 'pasajero', o: t.o, d: t.d, km: t.km, seats: t.seats, salida: t.salida, llegada: t.llegada, b, t,
+      other: { n: t.drv.n, ini: t.drv.ini, bg: t.drv.bg, sub: `${t.drv.auto.split(' ').slice(1).join(' ')} ${t.drv.color} · ${t.drv.pat}` }, codigo: b.codigo };
+  }
+  const pb = S.published.find(x => x.id === a.id), k = km(pb.o, pb.d), f = pb.pasajeros[0];
+  return { key: 'p' + pb.id, role: 'conductor', o: pb.o, d: pb.d, km: k, seats: pb.seats, salida: pb.salida, llegada: llegada(pb.salida, k), pb,
+    other: f ? { n: f.n, ini: f.ini, bg: '#F2DED5', sub: pb.pasajeros.length > 1 ? `y ${pb.pasajeros.slice(1).map(x => x.n.split(' ')[0]).join(', ')} · ${pb.pasajeros.length} pasajeros` : '1 pasajero' } : null,
+    codigo: 'F1-P' + pb.id.replace(/\D/g, '').padStart(3, '0') };
+}
+function mapSVG(o, d) {
+  const pts = routePts(o, d);
+  const dStr = 'M' + pts.map(p => p.join(' ')).join(' L');
+  const road = 'M' + ROAD.map(r => r.x + ' ' + r.y).join(' L');
+  const r74 = 'M' + R74.map(p => p.join(' ')).join(' L');
+  const show = new Set(['sc', 'st', 'mda', 'pin', 'vg', 'mad', o, d]);
+  const labels = Object.keys(T).filter(id => show.has(id)).map(id => {
+    const t = T[id], on = id === o || id === d;
+    if (id === 'mad') return `<text x="${t.x}" y="${t.y - 11}" text-anchor="middle" class="${on ? 'on' : ''}">${t.s}</text>`;
+    return `<text x="${t.x - 10}" y="${t.y + 3.5}" text-anchor="end" class="${on ? 'on' : ''}">${t.s}</text>`;
+  }).join('');
+  const dots = Object.keys(T).map(id => `<circle cx="${T[id].x}" cy="${T[id].y}" r="2.6" fill="#A99E89"/>`).join('');
+  return `<svg class="map" viewBox="0 0 340 290" role="img" aria-label="Mapa simulado del recorrido por Ruta 11, de ${T[o].n} a ${T[d].n}">
+    <rect width="340" height="290" fill="var(--land)"/>
+    <path class="sea" d="M0 0 H300 C288 6 274 6 266 9 C214 26 120 32 0 44 Z"/>
+    <path class="sea" d="M300 0 C290 12 280 26 276 40 C271 70 269 92 263 112 C255 140 247 175 237 205 C229 230 221 255 215 290 H340 V0 Z"/>
+    <text class="water" x="22" y="20">Bahía Samborombón</text>
+    <text class="water" x="300" y="150" text-anchor="middle" transform="rotate(-78 300 150)">MAR ARGENTINO</text>
+    <path class="road" d="${road}"/><path class="road" d="${r74}"/>
+    <g aria-hidden="true"><rect x="208" y="140" width="20" height="15" rx="3" fill="#fff" stroke="var(--ocean)" stroke-width="1.4"/><text x="218" y="151" text-anchor="middle" style="font-size:9px;font-weight:700;fill:var(--ocean)">11</text>
+    <rect x="128" y="198" width="20" height="15" rx="3" fill="#fff" stroke="var(--ocean)" stroke-width="1.4"/><text x="138" y="209" text-anchor="middle" style="font-size:9px;font-weight:700;fill:var(--ocean)">74</text></g>
+    ${dots}
+    <path id="trip-path" class="trip-line" d="${dStr}"/>
+    <circle cx="${T[o].x}" cy="${T[o].y}" r="6" fill="var(--ocean)" stroke="#fff" stroke-width="2"/>
+    <circle cx="${T[d].x}" cy="${T[d].y}" r="6" fill="#fff" stroke="var(--ocean)" stroke-width="3"/>
+    ${labels}
+    <circle id="car-dot" cx="${T[o].x}" cy="${T[o].y}" r="7.5" fill="var(--coral)" stroke="#fff" stroke-width="2.5"/>
+  </svg>`;
+}
+VIEWS.encurso = () => {
+  const a = activeInfo(), arrived = (S.simP[a.key] || 0) >= 1;
+  return `<div class="scr">
+  ${hdr('Viaje en curso', `${T[a.o].s} → ${T[a.d].s}`)}
+  <div class="map-card">${mapSVG(a.o, a.d)}</div>
+  <div class="pad">
+    <div class="live">
+      <div><small>Faltan</small><span class="big" id="lv-km">${a.km} km</span></div>
+      <div class="r"><small>Llegada estimada</small><span class="big" style="font-size:22px">${fTime(a.llegada)}</span></div>
+    </div>
+    <div class="progress" aria-hidden="true"><i id="lv-bar" style="width:0%"></i></div>
+    ${a.other ? `<div class="person">${avatar(a.other)}<div><b>${a.role === 'pasajero' ? 'Viajás con ' : 'Llevás a '}${a.other.n}</b><small>${a.other.sub}</small></div></div>`
+      : `<div class="person"><div><b>Viajás sin pasajeros</b><small>Nadie reservó este trayecto todavía.</small></div></div>`}
+    <div class="acts">
+      <button class="btn btn-dark" type="button" data-act="share">${ic('share')}Compartir viaje</button>
+      <button class="btn btn-ghost" type="button" data-act="help">${ic('help')}Ayuda</button>
+    </div>
+    <div class="arrived" id="arrived" role="status">${arrived ? arrivedHtml(a) : `<button class="link" type="button" data-act="sim-end">Simular llegada</button>`}</div>
+  </div>
+  <div class="spacer"></div>
+  </div>`;
+};
+const arrivedHtml = a => `<div class="banner" style="margin-bottom:12px">${ic('pin')}<span><b>Llegaste a ${T[a.d].s}.</b> Bajada en ${T[a.d].pt}.</span></div>
+  <button class="btn btn-primary" type="button" data-act="finish">Finalizar y calificar</button>`;
+function startSim() {
+  const path = $('#trip-path'), car = $('#car-dot');
+  if (!path || !car) return;
+  const a = activeInfo(), key = a.key, L = path.getTotalLength(), DUR = 26000;
+  let p = S.simP[key] || 0, last = performance.now();
+  cancelAnimationFrame(S.raf);
+  const place = () => {
+    const pt = path.getPointAtLength(p * L);
+    car.setAttribute('cx', pt.x.toFixed(1)); car.setAttribute('cy', pt.y.toFixed(1));
+    const kmEl = $('#lv-km'), bar = $('#lv-bar');
+    if (kmEl) kmEl.textContent = (p >= 1 ? 0 : Math.max(1, Math.ceil(a.km * (1 - p)))) + ' km';
+    if (bar) bar.style.width = (p * 100).toFixed(1) + '%';
+  };
+  const frame = now => {
+    if (cur() !== 'encurso' || !S.active || activeInfo().key !== key) return;
+    p = Math.min(1, p + (now - last) / DUR); last = now; S.simP[key] = p; place();
+    if (p < 1) S.raf = requestAnimationFrame(frame);
+    else { const box = $('#arrived'); if (box) box.innerHTML = arrivedHtml(a); }
+  };
+  place();
+  if (p < 1) S.raf = requestAnimationFrame(frame);
+}
+
+/* 8. Cierre */
+const RATE_TXT = ['', 'Muy malo', 'Malo', 'Normal', 'Bueno', 'Excelente'];
+VIEWS.cierre = () => {
+  const a = activeInfo(), rec = a.role === 'pasajero' ? a.b : a.pb;
+  const yaCalif = rec.rating > 0, other = a.other;
+  const p = precio(a.km, a.seats);
+  return `<div class="scr">
+  ${hdr('Fin del viaje', fDate(a.salida))}
+  <div class="pad">
+    ${other ? (yaCalif ? `<div class="vstate" style="margin:4px 0 22px">${ic('starf')}<div><b>Calificaste a ${other.n.split(' ')[0]} con ${rec.rating} ${rec.rating === 1 ? 'estrella' : 'estrellas'}</b><small>${rec.comment ? '“' + esc(rec.comment) + '”' : 'Sin comentario'}</small></div></div>`
+    : `<form id="f-rate" novalidate>
+      <h2 style="font-size:24px;letter-spacing:-.03em;margin:4px 0 4px;color:var(--ocean)">¿Cómo fue viajar con ${other.n.split(' ')[0]}?</h2>
+      <p class="muted" style="margin:0 0 6px;font-size:15px">Tu calificación ayuda a que la comunidad viaje tranquila.</p>
+      <div class="stars" role="radiogroup" aria-label="Calificación de 1 a 5 estrellas">
+        ${[1, 2, 3, 4, 5].map(i => `<button type="button" role="radio" aria-checked="${S.rating.v === i}" aria-label="${i} ${i === 1 ? 'estrella' : 'estrellas'}" data-act="star" data-v="${i}" class="${i <= S.rating.v ? 'on' : ''}">${ic('star')}</button>`).join('')}
+      </div>
+      <p class="rate-lbl" id="rate-lbl">${S.rating.v ? RATE_TXT[S.rating.v] : 'Tocá una estrella para calificar'}</p>
+      <div class="field"><label for="c-txt">Comentario (opcional)</label><textarea id="c-txt" class="control" maxlength="280" placeholder="Contá algo que le sirva a otras personas">${esc(S.rating.txt)}</textarea></div>
+      <button class="btn btn-primary" type="submit" id="btn-rate"${S.rating.v ? '' : ' disabled'}>Enviar calificación</button>
+    </form>`) : `<p class="lede" style="margin-top:4px">Viajaste sin pasajeros, así que no hay a quién calificar.</p>`}
+    <section class="block" aria-labelledby="h-rc">
+      <h2 class="h2" id="h-rc">Comprobante del viaje</h2>
+      ${receiptHtml(a, p)}
+    </section>
+    ${other && !yaCalif ? '' : `<button class="btn btn-ghost" type="button" data-act="tab" data-v="misviajes" style="margin-top:16px">Volver a Mis viajes</button>`}
+  </div>
+  ${foot}
+  </div>`;
+};
+function receiptHtml(a, p) {
+  const d = a.salida;
+  const head = `<h3>Comprobante de viaje</h3><div class="rc-id">${a.codigo}</div>
+    <dl>
+      <dt>Fecha</dt><dd>${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}</dd>
+      <dt>Trayecto</dt><dd>${T[a.o].s} → ${T[a.d].s}<small>${fTime(a.salida)} a ${fTime(a.llegada)}</small></dd>
+      <dt>Distancia</dt><dd>${a.km} km</dd>`;
+  if (a.role === 'pasajero') {
+    const b = a.b;
+    return `<div class="receipt">${head}
+      <dt>Conductor</dt><dd>${a.t.drv.n}<small>${a.t.drv.pat}</small></dd>
+      <dt>Aporte</dt><dd>${fmt(p.aporte)}<small>${b.aporte === 'efectivo' ? 'Efectivo al conductor' : payLbl[b.cargo]}</small></dd>
+      <dt>Cargo de servicio</dt><dd>${fmt(p.cargo)}<small>${payLbl[b.cargo]}</small></dd>
+    </dl>
+    <div class="tot"><span>Total</span><span>${fmt(p.total)}</span></div>
+    <p class="legal">Falta1 S.A.S. intermedia entre personas que comparten gastos de un trayecto. El aporte no constituye una tarifa de transporte. Comprobante no válido como factura.</p></div>`;
+  }
+  const n = a.pb.pasajeros.length;
+  return `<div class="receipt">${head}
+      <dt>Pasajeros</dt><dd>${n} de ${a.seats}</dd>
+      <dt>Aporte por asiento</dt><dd>${fmt(p.aporte)}</dd>
+      <dt>Costo estimado</dt><dd>${fmt(p.costo)}<small>$294,5 por km</small></dd>
+    </dl>
+    <div class="tot"><span>Recibiste</span><span>${fmt(p.aporte * n)}</span></div>
+    <p class="legal">Los cargos de servicio los paga cada pasajero a Falta1. El aporte compensa gastos y no constituye ganancia. Comprobante no válido como factura.</p></div>`;
+}
+
+/* Mis viajes */
+VIEWS.misviajes = () => {
+  const row = (date, title, sub, act, id, flag, past) => `<li><button type="button" class="tr-row${past ? ' past' : ''}" data-act="${act}" data-id="${id}">
+    <span class="dateblk"><b>${date.getDate()}</b><small>${MESES[date.getMonth()]}</small></span>
+    <span><span class="t">${title}</span><span class="s" style="display:block">${sub}</span>${flag ? `<span class="flag">${flag}</span>` : ''}</span>${ic('chev', 'sm')}</button></li>`;
+  if (S.mode === 'conductor') {
+    const prox = S.published.filter(x => x.estado !== 'finalizado').sort((a, b) => a.salida - b.salida), fin = S.published.filter(x => x.estado === 'finalizado');
+    return `<div class="scr">${hdr('Mis viajes', 'Viajes que publicaste')}
+    <div class="pad">
+      <h2 class="h2">Publicados</h2>
+      ${prox.length ? `<ul class="trips-list">${prox.map(pb => row(pb.salida, `${T[pb.o].s} → ${T[pb.d].s}`,
+        `${fTime(pb.salida)} · ${pb.pasajeros.length} de ${pb.seats} asientos reservados`, 'start-pub', pb.id, 'Tocá para iniciar el viaje')).join('')}</ul>`
+      : `<div class="empty"><p>No tenés viajes publicados.</p><button class="btn btn-primary" type="button" data-act="tab" data-v="publicar">Publicar un viaje</button></div>`}
+      ${fin.length ? `<h2 class="h2 block">Anteriores</h2><ul class="trips-list">${fin.map(pb => row(pb.salida, `${T[pb.o].s} → ${T[pb.d].s}`, 'Finalizado · ver comprobante', 'open-close-p', pb.id, '', true)).join('')}</ul>` : ''}
+    </div>${foot}</div>`;
+  }
+  const prox = S.bookings.filter(b => b.estado === 'proximo'), fin = S.bookings.filter(b => b.estado === 'finalizado');
+  return `<div class="scr">${hdr('Mis viajes', 'Viajes que reservaste')}
+  <div class="pad">
+    <h2 class="h2">Próximos</h2>
+    ${prox.length ? `<ul class="trips-list">${prox.map(b => { const t = S.trips[b.tripId];
+      return row(t.salida, `${T[t.o].s} → ${T[t.d].s}`, `${fTime(t.salida)} · con ${t.drv.n} · ${b.codigo}`, 'start-trip', b.id, 'Tocá para empezar el viaje'); }).join('')}</ul>`
+    : `<div class="empty"><p>No tenés viajes reservados.</p><button class="btn btn-primary" type="button" data-act="tab" data-v="buscar">Buscar un viaje</button></div>`}
+    <h2 class="h2 block">Anteriores</h2>
+    <ul class="trips-list">${fin.map(b => { const t = S.trips[b.tripId];
+      return row(t.salida, `${T[t.o].s} → ${T[t.d].s}`, `Con ${t.drv.n} · ${fmt(precio(t.km, t.seats).total)}`, 'open-close', b.id, b.rating ? '' : 'Falta tu calificación', true); }).join('')}</ul>
+  </div>${foot}</div>`;
+};
+
+/* Perfil */
+VIEWS.perfil = () => {
+  const ver = isVerified(), cond = S.mode === 'conductor';
+  const vdone = Object.values(S.verif).filter(Boolean).length;
+  return `<div class="scr">${hdr('Perfil')}
+  <div class="pad">
+    <div class="prof">${avatar({ ini: ME.ini, bg: '#F2DED5' }, 'lg')}<div><h1>${ME.n}</h1><p>En Falta1 desde marzo de 2025 · Villa Gesell</p></div></div>
+    ${ver ? `<div class="vstate">${ic('shield')}<div><b>Identidad verificada</b><small>${cond ? (isDriverOk() ? 'Licencia, seguro y VTV verificados' : 'Falta la documentación de conductor') : 'DNI y selfie validados'}</small></div>
+        ${cond && !isDriverOk() ? `<button class="btn btn-dark" type="button" data-act="goto-verif">Completar</button>` : ''}</div>`
+      : `<div class="vstate no">${ic('shield')}<div><b>Tu identidad no está verificada</b><small>Toma dos minutos.</small></div><button class="btn btn-dark" type="button" data-act="goto-verif">Verificar</button></div>`}
+    <div class="stats">
+      <div><b>14</b>viajes</div><div><b>4,9</b>calificación</div><div><b>${fmt(18640)}</b>ahorrado</div>
+    </div>
+    ${cond ? `<section class="block" aria-labelledby="h-car" style="margin-top:20px"><h2 class="h2" id="h-car">Tu auto</h2>
+      <div class="panel"><dl class="kv"><dt>Modelo</dt><dd>${ME.auto} ${ME.anio}</dd><dt>Color</dt><dd style="text-transform:capitalize">${ME.color}</dd><dt>Patente</dt><dd>${ME.pat}</dd></dl></div></section>` : ''}
+    <ul class="menu" style="margin-top:14px">
+      <li><button type="button" data-act="goto-verif">${ic('shield')}<span>Verificación</span><span class="st">${vdone} de ${cond ? 4 : 2}</span>${ic('chev', 'sm chev')}</button></li>
+      <li><button type="button" data-act="sheet-pay">${ic('card')}<span>Medios de pago</span><span class="st">2</span>${ic('chev', 'sm chev')}</button></li>
+      <li><button type="button" data-act="tab" data-v="misviajes">${ic('ticket')}<span>Mis viajes y comprobantes</span><span></span>${ic('chev', 'sm chev')}</button></li>
+      <li><button type="button" data-act="help">${ic('help')}<span>Ayuda y seguridad</span><span></span>${ic('chev', 'sm chev')}</button></li>
+      <li><button type="button" data-act="set-mode" data-v="${cond ? 'pasajero' : 'conductor'}">${ic(cond ? 'people' : 'car')}<span>Pasar a modo ${cond ? 'pasajero' : 'conductor'}</span><span></span>${ic('chev', 'sm chev')}</button></li>
+    </ul>
+  </div>${foot}</div>`;
+};
+
+/* =========================================================
+   HOJAS INFERIORES Y AVISOS
+   ========================================================= */
+const sheetEl = $('#sheet'), sheetBody = $('#sheet-body');
+let sheetReturn = null;
+function openSheet(title, html) {
+  sheetReturn = document.activeElement;
+  sheetBody.innerHTML = `<div class="sheet-grab" aria-hidden="true"></div>
+    <div class="sheet-h"><h2 id="sheet-title">${title}</h2><button class="icon-btn" type="button" data-act="sheet-close" aria-label="Cerrar">${ic('x')}</button></div>${html}`;
+  sheetEl.hidden = false;
+  const f = sheetBody.querySelector('.btn, .menu button, [data-act]:not(.icon-btn)') || sheetBody.querySelector('button');
+  if (f) f.focus();
+}
+function closeSheet(silent) {
+  if (sheetEl.hidden) return;
+  sheetEl.hidden = true; sheetBody.innerHTML = '';
+  if (!silent && sheetReturn && document.contains(sheetReturn)) sheetReturn.focus();
+}
+let toastTimer;
+function toast(msg) {
+  const el = $('#toast');
+  el.innerHTML = ic('check', 'sm') + '<span>' + msg + '</span>';
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+function verifSheet(k) {
+  const v = VSTEPS[k];
+  const shape = k === 'selfie'
+    ? '<ellipse cx="170" cy="100" rx="58" ry="74" fill="none" stroke="#fff" stroke-width="2.5" stroke-dasharray="8 6"/>'
+    : k === 'seguro'
+      ? '<rect x="110" y="30" width="120" height="140" rx="6" fill="none" stroke="#fff" stroke-width="2.5" stroke-dasharray="8 6"/><path d="M130 70h80M130 90h80M130 110h50" stroke="#ffffff66" stroke-width="2"/>'
+      : '<rect x="70" y="45" width="200" height="120" rx="10" fill="none" stroke="#fff" stroke-width="2.5" stroke-dasharray="8 6"/><circle cx="115" cy="95" r="20" fill="none" stroke="#ffffff66" stroke-width="2"/><path d="M150 85h80M150 105h60M150 125h70" stroke="#ffffff66" stroke-width="2"/>';
+  openSheet(v.t, `<div class="viewfinder" aria-hidden="true"><svg viewBox="0 0 340 200">${shape}</svg></div>
+    <p>${v.cap} Simulación: no se usa la cámara ni se guarda ninguna imagen.</p>
+    <button class="btn btn-primary" type="button" data-act="capture" data-k="${k}">${v.btn}</button>`);
+}
+
+/* =========================================================
+   EVENTOS
+   ========================================================= */
+document.addEventListener('click', e => {
+  const m = e.target.closest('[data-mode]');
+  if (m) { setMode(m.dataset.mode); return; }
+  const tb = e.target.closest('.tab');
+  if (tb) { tab(tb.dataset.tab); return; }
+  const tg = e.target.closest('[data-tab-go]');
+  if (tg) { tab(tg.dataset.tabGo); return; }
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act;
+  ACTIONS[act] && ACTIONS[act](el, e);
+});
+
+const ACTIONS = {
+  back: () => back(),
+  tab: el => tab(el.dataset.v),
+  swap: () => { readSearch(); const s = S.search; [s.o, s.d] = [s.d, s.o]; render(false); $('.swap').focus(); },
+  when: el => { readSearch(); S.search.ahora = el.dataset.v === 'ahora'; render(false); screenEl.querySelector(`[data-v="${el.dataset.v}"]`).focus(); },
+  saved: el => { S.search.o = el.dataset.o; S.search.d = el.dataset.d; buscar(); go('resultados'); },
+  tomorrow: () => { S.search.fecha = iso(addDays(TODAY, 1)); S.search.ahora = false; buscar(); render(); },
+  'open-trip': el => { S.sel = el.dataset.id; go('detalle'); },
+  reservar: () => go('reserva'),
+  confirmar: el => {
+    if (el.disabled) return;
+    el.disabled = true; el.innerHTML = '<span class="spin" aria-hidden="true"></span>Procesando pago…';
+    setTimeout(() => {
+      const t = S.trips[S.sel];
+      t.libres = Math.max(0, t.libres - 1);
+      const b = { id: 'b' + Date.now(), tripId: t.id, codigo: 'F1-' + (3000 + Math.floor(Math.random() * 6000)), cargo: S.pay.cargo, aporte: S.pay.aporte, estado: 'proximo' };
+      S.bookings.unshift(b); S.lastBooking = b.id;
+      S.stack = ['buscar', 'confirmacion']; render();
+    }, 1300);
+  },
+  'start-trip': el => { S.active = { type: 'b', id: el.dataset.id }; S.stack = ['misviajes', 'encurso']; render(); },
+  'start-pub': el => { S.active = { type: 'p', id: el.dataset.id }; S.stack = ['misviajes', 'encurso']; render(); },
+  'open-close': el => { S.active = { type: 'b', id: el.dataset.id }; S.rating = { v: 0, txt: '' }; go('cierre'); },
+  'open-close-p': el => { S.active = { type: 'p', id: el.dataset.id }; S.rating = { v: 0, txt: '' }; go('cierre'); },
+  'sim-end': () => { S.simP[activeInfo().key] = 1; render(false); const b = $('#arrived .btn'); if (b) b.focus(); },
+  finish: () => { S.rating = { v: 0, txt: '' }; const a = activeInfo(); (a.role === 'pasajero' ? a.b : a.pb).estado = 'finalizado'; S.stack = ['misviajes', 'cierre']; render(); },
+  star: el => {
+    S.rating.v = +el.dataset.v;
+    screenEl.querySelectorAll('.stars button').forEach(b => { const i = +b.dataset.v; b.classList.toggle('on', i <= S.rating.v); b.setAttribute('aria-checked', i === S.rating.v); });
+    $('#rate-lbl').textContent = RATE_TXT[S.rating.v];
+    $('#btn-rate').disabled = false;
+  },
+  share: () => {
+    const a = activeInfo();
+    openSheet('Compartir viaje', `<p>Quien reciba el enlace ve en tiempo real por dónde va el auto, la patente y la hora de llegada.</p>
+      <div class="linkbox"><span>falta1.app/v/${a.codigo}</span><button class="btn btn-dark" type="button" data-act="copy" data-v="https://falta1.app/v/${a.codigo}">${ic('copy', 'sm')}Copiar</button></div>
+      <ul class="menu">
+        <li><button type="button" data-act="send" data-v="Silvia (mamá)">${ic('chat')}<span>Enviar a Silvia (mamá)</span>${ic('chev', 'sm chev')}</button></li>
+        <li><button type="button" data-act="send" data-v="Juan">${ic('chat')}<span>Enviar a Juan</span>${ic('chev', 'sm chev')}</button></li>
+      </ul>`);
+  },
+  copy: el => {
+    try { navigator.clipboard && navigator.clipboard.writeText(el.dataset.v).catch(() => {}); } catch (_) {}
+    closeSheet(); toast('Enlace copiado');
+  },
+  send: el => { closeSheet(); toast('Le compartimos tu viaje a ' + el.dataset.v); },
+  help: () => openSheet('¿Necesitás ayuda?', `<p>Si estás en peligro, llamá primero a emergencias. Mientras dure la consulta compartimos tu ubicación con el equipo de Falta1.</p>
+    <ul class="menu">
+      <li><button type="button" data-act="help-opt" data-v="Simulación: en la app real esto llama al 911">${ic('phone')}<span>Llamar al 911</span>${ic('chev', 'sm chev')}</button></li>
+      <li><button type="button" data-act="help-opt" data-v="Te escribimos desde soporte en minutos">${ic('chat')}<span>Hablar con soporte de Falta1</span>${ic('chev', 'sm chev')}</button></li>
+      <li><button type="button" data-act="help-opt" data-v="Recibimos tu reporte">${ic('flag')}<span>Reportar un problema con el viaje</span>${ic('chev', 'sm chev')}</button></li>
+    </ul>`),
+  'help-opt': el => { closeSheet(); toast(el.dataset.v); },
+  'sheet-close': () => closeSheet(),
+  'sheet-pay': () => openSheet('Medios de pago', `<ul class="menu">
+      <li><button type="button" data-act="sheet-close">${ic('wallet')}<span>Mercado Pago · agus.ledesma</span>${ic('check', 'sm chev')}</button></li>
+      <li><button type="button" data-act="sheet-close">${ic('card')}<span>Visa débito terminada en 4821</span><span></span></button></li>
+    </ul><p style="margin-top:14px">Los pagos de este prototipo son simulados.</p>`),
+  'goto-verif': () => { if (cur() !== 'verificacion') go('verificacion'); },
+  verif: el => verifSheet(el.dataset.k),
+  capture: el => {
+    if (el.disabled) return;
+    const k = el.dataset.k;
+    el.disabled = true; el.innerHTML = '<span class="spin" aria-hidden="true"></span>Validando…';
+    setTimeout(() => {
+      S.verif[k] = true;
+      closeSheet(true); render(false);
+      const keys = S.mode === 'conductor' ? ['dni', 'selfie', 'licencia', 'seguro'] : ['dni', 'selfie'];
+      const next = screenEl.querySelector('.steps .go') || screenEl.querySelector('.vstate + .btn');
+      if (next) next.focus();
+      toast(keys.every(x => S.verif[x]) ? 'Identidad verificada' : VSTEPS[k].ok);
+    }, 1200);
+  },
+  'set-mode': el => setMode(el.dataset.v, !!el.dataset.keep),
+  pswap: () => { const s = S.pub; [s.o, s.d] = [s.d, s.o]; $('#p-o').value = s.o; $('#p-d').value = s.d; updatePub(true); },
+  seats: el => {
+    S.pub.seats = Math.min(4, Math.max(1, S.pub.seats + +el.dataset.v));
+    const s = S.pub.seats;
+    $('#p-seats').textContent = s + (s === 1 ? ' asiento' : ' asientos');
+    const [minus, plus] = screenEl.querySelectorAll('.stepper button');
+    minus.disabled = s <= 1; plus.disabled = s >= 4;
+    if (el.disabled) (el === minus ? plus : minus).focus();
+    updatePub(false);
+  },
+  publicar: el => {
+    if (el.disabled) return;
+    const s = S.pub, salida = at(fromIso(s.fecha), s.hora || '08:00');
+    const pb = { id: 'p' + Date.now(), o: s.o, d: s.d, salida, seats: s.seats, paradas: s.paradas.slice(), estado: 'proximo', pasajeros: [] };
+    S.published.unshift(pb); S.lastPub = pb.id;
+    S.stack = ['publicar', 'publicado']; render();
+    setTimeout(() => {
+      pb.pasajeros.push({ n: 'Julián Ortiz', ini: 'JO' });
+      toast(`Nueva reserva: Julián reservó un asiento a ${T[pb.d].s}`);
+      if (cur() === 'misviajes') render(false);
+    }, 5000);
+  }
+};
+
+function setMode(mode, keep) {
+  if (S.mode === mode) return;
+  S.mode = mode;
+  document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-checked', b.dataset.mode === mode));
+  if (keep) render(false);
+  else tab(mode === 'conductor' ? 'publicar' : 'buscar');
+  toast(mode === 'conductor' ? 'Modo conductor activado' : 'Modo pasajero activado');
+}
+function readSearch() {
+  const o = $('#b-o'), d = $('#b-d'), f = $('#b-f');
+  if (o) S.search.o = o.value;
+  if (d) S.search.d = d.value;
+  if (f && f.value) S.search.fecha = f.value;
+}
+function updatePub(routeChanged) {
+  if (routeChanged) $('#p-par').innerHTML = paradasHtml();
+  $('#p-sum').innerHTML = pubSumHtml();
+  $('#btn-pub').disabled = S.pub.o === S.pub.d;
+}
+
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.id === 'b-o' || t.id === 'b-d' || t.id === 'b-f') { readSearch(); const err = $('#b-err'); if (err) err.textContent = ''; }
+  if (t.name === 'aporte' || t.name === 'cargo') {
+    S.pay[t.name] = t.value;
+    const tr = S.trips[S.sel], p = precio(tr.km, tr.seats);
+    $('#bk').innerHTML = bkHtml(p);
+    $('#btn-confirm').textContent = 'Confirmar reserva · ' + fmt(S.pay.aporte === 'efectivo' ? p.cargo : p.total);
+  }
+  if (t.id === 'p-o' || t.id === 'p-d') { S.pub[t.id === 'p-o' ? 'o' : 'd'] = t.value; updatePub(true); }
+  if (t.id === 'p-f') S.pub.fecha = t.value || S.pub.fecha;
+  if (t.id === 'p-h') S.pub.hora = t.value || S.pub.hora;
+  if (t.name === 'parada') {
+    S.pub.paradas = Array.from(screenEl.querySelectorAll('input[name=parada]:checked')).map(x => x.value);
+  }
+});
+document.addEventListener('input', e => { if (e.target.id === 'c-txt') S.rating.txt = e.target.value; });
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  if (e.target.id === 'f-buscar') {
+    readSearch();
+    const err = $('#b-err');
+    if (S.search.o === S.search.d) { err.textContent = 'El destino tiene que ser distinto del origen.'; $('#b-d').focus(); return; }
+    if (!S.search.ahora && (!S.search.fecha || fromIso(S.search.fecha) < TODAY)) { err.textContent = 'Elegí una fecha de hoy en adelante.'; $('#b-f').focus(); return; }
+    buscar(); go('resultados');
+  }
+  if (e.target.id === 'f-rate') {
+    if (!S.rating.v) return;
+    const a = activeInfo(), rec = a.role === 'pasajero' ? a.b : a.pb;
+    rec.rating = S.rating.v; rec.comment = S.rating.txt.trim(); rec.estado = 'finalizado';
+    tab('misviajes');
+    toast('¡Gracias! Calificaste a ' + a.other.n.split(' ')[0]);
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !sheetEl.hidden) closeSheet();
+  if (e.key === 'Tab' && !sheetEl.hidden) {
+    const f = Array.from(sheetBody.querySelectorAll('button:not([disabled])'));
+    if (!f.length) return;
+    if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+    else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+  }
+});
+
+/* Escala del marco en escritorio */
+function fit() {
+  const w = $('#phone-wrap');
+  if (innerWidth <= 500) { w.style.setProperty('--s', 1); return; }
+  const s = Math.max(0.55, Math.min(1, (innerHeight - 150) / 864, (innerWidth - 32) / 410));
+  w.style.setProperty('--s', s.toFixed(3));
+}
+addEventListener('resize', fit);
+fit();
+const tick = () => { const n = new Date(); $('#clock').textContent = n.getHours() + ':' + pad(n.getMinutes()); };
+tick(); setInterval(tick, 30000);
+
+render(false);
+})();
+</script>
+</body>
+</html>
